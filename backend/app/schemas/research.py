@@ -182,3 +182,81 @@ class PairedStatisticsResponse(BaseModel):
     marginal_power: StatisticsSummary
     marginal_carbon: StatisticsSummary
     formula_version: str
+
+
+class InteractionEffectComputeRequest(BaseModel):
+    experiment_id: Optional[int] = None
+    control_a: str = Field(..., min_length=1, max_length=50)
+    control_b: str = Field(..., min_length=1, max_length=50)
+    baseline_run_ids: List[int] = Field(..., min_length=1)
+    control_a_run_ids: List[int] = Field(..., min_length=1)
+    control_b_run_ids: List[int] = Field(..., min_length=1)
+    combined_run_ids: List[int] = Field(..., min_length=1)
+    carbon_intensity: Optional[float] = Field(None, ge=0)
+
+
+class InteractionSecurityEffectivenessResponse(BaseModel):
+    baseline: Optional[SecurityEffectivenessResponse] = None
+    control_a: Optional[SecurityEffectivenessResponse] = None
+    control_b: Optional[SecurityEffectivenessResponse] = None
+    combined: Optional[SecurityEffectivenessResponse] = None
+
+
+class InteractionEffectResponse(BaseModel):
+    id: int
+    experiment_id: int
+    trial_number: int
+    baseline_run_id: Optional[int] = None
+    control_a_run_id: Optional[int] = None
+    control_b_run_id: Optional[int] = None
+    combined_run_id: Optional[int] = None
+    control_a: str
+    control_b: str
+    attack_type: Optional[str] = None
+    attack_intensity: Optional[str] = None
+    workload_value: Optional[float] = None
+    workload_unit: Optional[str] = None
+    duration_seconds: Optional[float] = None
+    energy_baseline: float
+    energy_a: float
+    energy_b: float
+    energy_ab: float
+    interaction_effect: float
+    interaction_index: Optional[float] = None
+    interpretation: Optional[str] = None
+    power_baseline: Optional[float] = None
+    power_a: Optional[float] = None
+    power_b: Optional[float] = None
+    power_ab: Optional[float] = None
+    interaction_power: Optional[float] = None
+    carbon_baseline_kg: Optional[float] = None
+    carbon_a_kg: Optional[float] = None
+    carbon_b_kg: Optional[float] = None
+    carbon_ab_kg: Optional[float] = None
+    interaction_carbon_kg: Optional[float] = None
+    carbon_intensity: Optional[float] = None
+    energy_provider: Optional[str] = None
+    measurement_mode: Optional[str] = None
+    formula_version: str
+    created_at: datetime
+    security_effectiveness: Optional[InteractionSecurityEffectivenessResponse] = None
+
+    model_config = {"from_attributes": True}
+
+
+class InteractionEffectListResponse(BaseModel):
+    total: int
+    items: List[InteractionEffectResponse]
+
+
+class InteractionStatisticsResponse(BaseModel):
+    interaction_energy: StatisticsSummary
+    interaction_power: StatisticsSummary
+    interaction_carbon: StatisticsSummary
+    formula_version: str
+
+
+class InteractionEffectComputeResponse(BaseModel):
+    total: int
+    results: List[InteractionEffectResponse]
+    statistics: InteractionStatisticsResponse

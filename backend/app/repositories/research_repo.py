@@ -173,6 +173,31 @@ class InteractionResultRepository(BaseRepository[InteractionResult]):
         result = self.db.execute(query)
         return list(result.scalars().all())
 
+    def filter_interactions(
+        self,
+        attack_type: Optional[str] = None,
+        attack_intensity: Optional[str] = None,
+        measurement_mode: Optional[str] = None,
+        control_a: Optional[str] = None,
+        control_b: Optional[str] = None,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> List[InteractionResult]:
+        query = select(InteractionResult)
+        if attack_type:
+            query = query.where(InteractionResult.attack_type == attack_type)
+        if attack_intensity:
+            query = query.where(InteractionResult.attack_intensity == attack_intensity)
+        if measurement_mode:
+            query = query.where(InteractionResult.measurement_mode == measurement_mode)
+        if control_a:
+            query = query.where(InteractionResult.control_a == control_a)
+        if control_b:
+            query = query.where(InteractionResult.control_b == control_b)
+        query = query.order_by(InteractionResult.created_at.desc()).offset(offset).limit(limit)
+        result = self.db.execute(query)
+        return list(result.scalars().all())
+
 
 class DefenseAmplificationResultRepository(BaseRepository[DefenseAmplificationResult]):
     def __init__(self, db: Session):

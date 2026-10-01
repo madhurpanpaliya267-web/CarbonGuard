@@ -144,6 +144,33 @@ class InteractionResult(Base):
     measurement_mode = Column(String(20), nullable=True)
     created_at = Column(DateTime, nullable=False, default=_utcnow, index=True)
 
+    # Phase 6: security-control interaction effects
+    trial_number = Column(Integer, nullable=False, default=1)
+    baseline_run_id = Column(Integer, ForeignKey("experiment_runs.id"), index=True, nullable=True)
+    control_a_run_id = Column(Integer, ForeignKey("experiment_runs.id"), index=True, nullable=True)
+    control_b_run_id = Column(Integer, ForeignKey("experiment_runs.id"), index=True, nullable=True)
+    combined_run_id = Column(Integer, ForeignKey("experiment_runs.id"), index=True, nullable=True)
+
+    workload_value = Column(Float, nullable=True)
+    workload_unit = Column(String(50), nullable=True)
+    duration_seconds = Column(Float, nullable=True)
+
+    power_baseline = Column(Float, nullable=True)
+    power_a = Column(Float, nullable=True)
+    power_b = Column(Float, nullable=True)
+    power_ab = Column(Float, nullable=True)
+    interaction_power = Column(Float, nullable=True)
+
+    carbon_baseline_kg = Column(Float, nullable=True)
+    carbon_a_kg = Column(Float, nullable=True)
+    carbon_b_kg = Column(Float, nullable=True)
+    carbon_ab_kg = Column(Float, nullable=True)
+    interaction_carbon_kg = Column(Float, nullable=True)
+    carbon_intensity = Column(Float, nullable=True)
+
+    energy_provider = Column(String(50), nullable=True)
+    formula_version = Column(String(50), nullable=False, default="interaction_effect_v1")
+
     experiment = relationship("Experiment", back_populates="interactions")
 
 

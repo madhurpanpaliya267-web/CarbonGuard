@@ -9,6 +9,10 @@ from app.services.marginal_energy_service import (
     MarginalEnergyService,
     MarginalEnergyError,
 )
+from app.services.interaction_effect_service import (
+    InteractionEffectService,
+    InteractionEffectError,
+)
 from app.schemas.research import (
     ExperimentCreateRequest,
     ExperimentResponse,
@@ -23,6 +27,10 @@ from app.schemas.research import (
     MarginalEnergyListResponse,
     PairedStatisticsRequest,
     PairedStatisticsResponse,
+    InteractionEffectComputeRequest,
+    InteractionEffectComputeResponse,
+    InteractionEffectResponse,
+    InteractionEffectListResponse,
 )
 
 router = APIRouter()
@@ -206,3 +214,66 @@ def compute_experiment_marginal_energy(
         }
     except MarginalEnergyError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post(
+    "/interaction-effects",
+    response_model=InteractionEffectComputeResponse,
+    status_code=201,
+)
+def compute_interaction_effects(
+    request: InteractionEffectComputeRequest,
+    db: Session = Depends(get_db),
+):
+    service = InteractionEffectService(db)
+    try:
+        return service.compute_interaction_effects(
+            baseline_run_ids=request.baseline_run_ids,
+            control_a_run_ids=request.control_a_run_ids,
+            control_b_run_ids=request.control_b_run_ids,
+            combined_run_ids=request.combined_run_ids,
+            control_a=request.control_a,
+            control_b=request.control_b,
+            experiment_id=request.experiment_id,
+            carbon_intensity=request.carbon_intensity,
+        )
+    except InteractionEffectError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/interaction-effects", response_model=InteractionEffectListResponse)
+def list_interaction_effects(
+    attack_type: str = None,
+    attack_intensity: str = None,
+    measurement_mode: str = None,
+    control_a: str = None,
+    control_b: str = None,
+    offset: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    service = InteractionEffectService(db)
+    return service.list_interaction_effects(
+        attack_type=attack_type,
+        attack_intensity=attack_intensity,
+        measurement_mode=measurement_mode,
+        control_a=control_a,
+        control_b=control_b,
+        offset=offset,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/interaction-effects/{interaction_id}",
+    response_model=InteractionEffectResponse,
+)
+def get_interaction_effect(interaction_id: int, db: Session = Depends(get_db)):
+    service = InteractionEffectService(db)
+    response = service.get_interaction_effect(interaction_id)
+    if not response:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Interaction effect not found: {interaction_id}",
+        )
+    return response

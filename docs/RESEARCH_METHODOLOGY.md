@@ -152,6 +152,171 @@ Any changes to the calculation methodology will increment this version.
 
 ---
 
+## Security-Control Interaction Effects
+
+### Research Question
+
+How does the combined energy cost of multiple cybersecurity controls differ from the energy cost expected from applying those controls individually?
+
+### Experimental Design
+
+A security-control interaction experiment records four controlled configurations:
+
+| Configuration | Symbol | Security Controls |
+|---|---|---|
+| Baseline | E_0 | None |
+| Control A only | E_A | Firewall (or any single control) |
+| Control B only | E_B | IDS (or any single control) |
+| Combined | E_AB | Control A + Control B |
+
+All four configurations must be comparable. They must use the same:
+
+| Dimension | Must Match |
+|---|---|
+| Attack type | ddos, brute_force, etc. |
+| Attack intensity | low, medium, high |
+| Workload value | e.g., 500 packets/sec |
+| Workload unit | e.g., packets_per_second |
+| Duration | e.g., 30 seconds |
+| Environment | software version, configuration version |
+| Energy provider | estimated, rapl, etc. |
+| Measurement mode | ESTIMATED, MEASURED, SIMULATED |
+
+Only the security-control configuration may differ. If any dimension differs, the calculation is rejected with a clear error. Incompatible experiments are never silently combined.
+
+### Interaction Formula
+
+```
+I(A,B) = E_AB - E_A - E_B + E_0
+```
+
+Where:
+- E_0 = baseline energy with no security controls (joules)
+- E_A = energy with control A only (joules)
+- E_B = energy with control B only (joules)
+- E_AB = energy with both controls (joules)
+
+An equivalent view: `I = (E_AB - E_0) - (E_A - E_0) - (E_B - E_0)`, i.e., the difference between the observed combined cost and the sum of the individual costs above baseline.
+
+### Interaction Index
+
+```
+Interaction Index = I(A,B) / E_0
+```
+
+Computed only when `E_0 > 0`. Division by a zero or negative baseline is never performed; the index is omitted instead.
+
+### Interpretation
+
+Interpretation is reported neutrally. The system never labels an interaction as beneficial or harmful automatically.
+
+| Value | Interpretation |
+|---|---|
+| I approximately 0 | approximately additive |
+| I > 0 | super-additive |
+| I < 0 | sub-additive |
+
+"I approximately 0" uses an absolute tolerance of 1e-9 joules. The measured value and interpretation are both returned.
+
+### Attack Conditioning
+
+Every interaction result retains the full attack context:
+
+- Attack type (7 types: DDoS, Brute Force, Port Scan, SQL Injection, Suspicious Login, Malware, Phishing)
+- Attack intensity (low, medium, high)
+- Workload value and workload unit
+- Duration
+
+Results are never combined across incompatible workload units (e.g., `packets_per_second` is never mixed with `login_attempts`).
+
+### Trial Pairing
+
+Multiple trials are paired by trial number across all four configurations:
+
+```
+Trial 1: I_1 = E_AB,1 - E_A,1 - E_B,1 + E_0,1
+Trial 2: I_2 = E_AB,2 - E_A,2 - E_B,2 + E_0,2
+Trial 3: I_3 = E_AB,3 - E_A,3 - E_B,3 + E_0,3
+```
+
+Run counts must match across the four lists, and trial numbers must align. Unpaired or mismatched trials are rejected.
+
+### Descriptive Statistics
+
+Statistics are calculated over the per-trial interaction values:
+
+| Statistic | Description |
+|---|---|
+| Mean | Average interaction energy |
+| Median | Middle value |
+| Standard deviation | Population spread of values |
+| Minimum | Smallest interaction value |
+| Maximum | Largest interaction value |
+
+Statistics are reported for interaction energy, interaction power, and interaction carbon.
+
+**Note**: No hypothesis testing or statistical significance claims are made.
+
+### Measurement Modes
+
+Every result preserves its measurement mode and energy provider:
+
+| Mode | Description | Status |
+|---|---|---|
+| ESTIMATED | Deterministic estimation model | **Currently active** |
+| MEASURED | Hardware measurement | Requires provider |
+| SIMULATED | Simulated reading | Simulated only |
+
+If all four runs use ESTIMATED, the result records `measurement_mode = ESTIMATED`. Estimated energy is never called measured energy, and no hardware measurements are fabricated.
+
+**Important**: Current results are ESTIMATED unless a real energy measurement provider is configured.
+
+### Carbon Calculation
+
+Uses the existing CarbonGuard carbon methodology (no second formula):
+
+```
+energy_kWh = energy_joules / 3,600,000
+gross_CO2_kg = energy_kWh × carbon_intensity_g_per_kWh / 1000
+```
+
+Carbon is computed for all four configurations, and the interaction carbon impact follows the same interaction formula:
+
+```
+I_C = C_AB - C_A - C_B + C_0
+```
+
+Default carbon intensity: 475 gCO2/kWh (configurable per calculation).
+
+### Security Effectiveness
+
+Where available, each result exposes security-effectiveness for all four configurations:
+
+- Detection rate
+- Detection latency and mitigation latency (when available)
+- False positive rate (when available)
+- Threat severity
+- Security score
+
+Phase 6 is measurement and interaction analysis only. No control optimization or adaptive selection is performed.
+
+### Formula Version
+
+Current formula version: `interaction_effect_v1`
+
+Any changes to the calculation methodology will increment this version.
+
+### Limitations
+
+1. **ESTIMATED data**: All current energy values are estimates, not hardware measurements
+2. **Linear estimation model**: The current provider is linear in control count, so estimated runs typically produce approximately additive interactions; non-zero interactions require measured or non-linear data
+3. **Two controls at a time**: The formula analyzes pairs of controls; higher-order interactions are not modeled
+4. **No significance testing**: Descriptive statistics only
+5. **Simulation-based effectiveness**: Security effectiveness comes from simulation, not real security systems
+6. **Single host**: All measurements assume a single computing environment
+
+---
+
 ## Experiment Lifecycle
 
 ```
