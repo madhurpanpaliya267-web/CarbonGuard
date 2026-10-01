@@ -1,0 +1,57 @@
+# Dependencies
+frontend/node_modules/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.pytest_cache/
+backend/tests/.pytest_cache/
+
+# Build output
+frontend/dist/
+backend/*.db
+backend/test_*.db
+*.tsbuildinfo
+
+# Environment files
+backend/.env
+frontend/.env
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# Python
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Docker
+backend/data/
+frontend/data/
+
+# Test caches
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Misc
+*.sqlite3
+*.db-journal
