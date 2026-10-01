@@ -13,6 +13,10 @@ from app.services.interaction_effect_service import (
     InteractionEffectService,
     InteractionEffectError,
 )
+from app.services.defense_energy_amplification_service import (
+    DefenseEnergyAmplificationService,
+    DefenseEnergyAmplificationError,
+)
 from app.schemas.research import (
     ExperimentCreateRequest,
     ExperimentResponse,
@@ -31,6 +35,10 @@ from app.schemas.research import (
     InteractionEffectComputeResponse,
     InteractionEffectResponse,
     InteractionEffectListResponse,
+    DefenseAmplificationComputeRequest,
+    DefenseAmplificationComputeResponse,
+    DefenseAmplificationResponse,
+    DefenseAmplificationListResponse,
 )
 
 router = APIRouter()
@@ -275,5 +283,68 @@ def get_interaction_effect(interaction_id: int, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=404,
             detail=f"Interaction effect not found: {interaction_id}",
+        )
+    return response
+
+
+@router.post(
+    "/defense-energy-amplification",
+    response_model=DefenseAmplificationComputeResponse,
+    status_code=201,
+)
+def compute_defense_energy_amplification(
+    request: DefenseAmplificationComputeRequest,
+    db: Session = Depends(get_db),
+):
+    service = DefenseEnergyAmplificationService(db)
+    try:
+        return service.compute_amplification(
+            baseline_run_ids=request.baseline_run_ids,
+            defense_run_ids=request.defense_run_ids,
+            control_name=request.control_name,
+            experiment_id=request.experiment_id,
+            carbon_intensity=request.carbon_intensity,
+        )
+    except DefenseEnergyAmplificationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get(
+    "/defense-energy-amplification",
+    response_model=DefenseAmplificationListResponse,
+)
+def list_defense_energy_amplification(
+    attack_type: str = None,
+    attack_intensity: str = None,
+    measurement_mode: str = None,
+    control_name: str = None,
+    offset: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    service = DefenseEnergyAmplificationService(db)
+    return service.list_amplification(
+        attack_type=attack_type,
+        attack_intensity=attack_intensity,
+        measurement_mode=measurement_mode,
+        control_name=control_name,
+        offset=offset,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/defense-energy-amplification/{amplification_id}",
+    response_model=DefenseAmplificationResponse,
+)
+def get_defense_energy_amplification(
+    amplification_id: int, db: Session = Depends(get_db)
+):
+    service = DefenseEnergyAmplificationService(db)
+    response = service.get_amplification(amplification_id)
+    if not response:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Defense amplification not found: {amplification_id}",
         )
     return response

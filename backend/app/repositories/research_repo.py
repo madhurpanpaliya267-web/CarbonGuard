@@ -221,6 +221,28 @@ class DefenseAmplificationResultRepository(BaseRepository[DefenseAmplificationRe
         result = self.db.execute(query)
         return list(result.scalars().all())
 
+    def filter_amplification(
+        self,
+        attack_type: Optional[str] = None,
+        attack_intensity: Optional[str] = None,
+        measurement_mode: Optional[str] = None,
+        control_name: Optional[str] = None,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> List[DefenseAmplificationResult]:
+        query = select(DefenseAmplificationResult)
+        if attack_type:
+            query = query.where(DefenseAmplificationResult.attack_type == attack_type)
+        if attack_intensity:
+            query = query.where(DefenseAmplificationResult.attack_intensity == attack_intensity)
+        if measurement_mode:
+            query = query.where(DefenseAmplificationResult.measurement_mode == measurement_mode)
+        if control_name:
+            query = query.where(DefenseAmplificationResult.control_name == control_name)
+        query = query.order_by(DefenseAmplificationResult.created_at.desc()).offset(offset).limit(limit)
+        result = self.db.execute(query)
+        return list(result.scalars().all())
+
 
 class EnergyAttributionRepository(BaseRepository[EnergyAttribution]):
     def __init__(self, db: Session):

@@ -260,3 +260,66 @@ class InteractionEffectComputeResponse(BaseModel):
     total: int
     results: List[InteractionEffectResponse]
     statistics: InteractionStatisticsResponse
+
+
+class DefenseAmplificationComputeRequest(BaseModel):
+    experiment_id: Optional[int] = None
+    control_name: str = Field(..., min_length=1, max_length=50)
+    baseline_run_ids: List[int] = Field(..., min_length=1)
+    defense_run_ids: List[int] = Field(..., min_length=1)
+    carbon_intensity: Optional[float] = Field(None, ge=0)
+
+
+class DefenseAmplificationStatisticsResponse(BaseModel):
+    amplification_energy: StatisticsSummary
+    amplification_ratio: StatisticsSummary
+    power_amplification: StatisticsSummary
+    carbon_amplification: StatisticsSummary
+    formula_version: str
+
+
+class DefenseAmplificationResponse(BaseModel):
+    id: int
+    experiment_id: int
+    trial_number: int
+    baseline_run_id: Optional[int] = None
+    defense_run_id: Optional[int] = None
+    control_name: str
+    attack_type: str
+    attack_intensity: str
+    attack_workload: float
+    workload_unit: str
+    duration_seconds: Optional[float] = None
+    energy_attack_only: float
+    energy_attack_defense: float
+    additional_defense_energy: float
+    defense_energy_amplification: float
+    power_baseline: Optional[float] = None
+    power_defense: Optional[float] = None
+    power_amplification: Optional[float] = None
+    carbon_baseline_kg: Optional[float] = None
+    carbon_defense_kg: Optional[float] = None
+    amplification_carbon_kg: Optional[float] = None
+    carbon_intensity: Optional[float] = None
+    energy_provider: Optional[str] = None
+    measurement_mode: Optional[str] = None
+    environment_info: Optional[str] = None
+    software_version: Optional[str] = None
+    configuration_version: Optional[str] = None
+    num_paired_trials: int
+    statistics: Optional[DefenseAmplificationStatisticsResponse] = None
+    formula_version: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class DefenseAmplificationListResponse(BaseModel):
+    total: int
+    items: List[DefenseAmplificationResponse]
+
+
+class DefenseAmplificationComputeResponse(BaseModel):
+    total: int
+    results: List[DefenseAmplificationResponse]
+    statistics: DefenseAmplificationStatisticsResponse

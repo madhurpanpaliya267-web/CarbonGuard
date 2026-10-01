@@ -191,6 +191,32 @@ class DefenseAmplificationResult(Base):
     measurement_mode = Column(String(20), nullable=True)
     created_at = Column(DateTime, nullable=False, default=_utcnow, index=True)
 
+    # Phase 7: defense energy amplification
+    trial_number = Column(Integer, nullable=False, default=1)
+    baseline_run_id = Column(Integer, ForeignKey("experiment_runs.id"), index=True, nullable=True)
+    defense_run_id = Column(Integer, ForeignKey("experiment_runs.id"), index=True, nullable=True)
+
+    duration_seconds = Column(Float, nullable=True)
+
+    power_baseline = Column(Float, nullable=True)
+    power_defense = Column(Float, nullable=True)
+    power_amplification = Column(Float, nullable=True)
+
+    carbon_baseline_kg = Column(Float, nullable=True)
+    carbon_defense_kg = Column(Float, nullable=True)
+    amplification_carbon_kg = Column(Float, nullable=True)
+    carbon_intensity = Column(Float, nullable=True)
+
+    energy_provider = Column(String(50), nullable=True)
+    environment_info = Column(Text, nullable=True)
+    software_version = Column(String(50), nullable=True)
+    configuration_version = Column(String(50), nullable=True)
+
+    num_paired_trials = Column(Integer, nullable=False, default=1)
+    statistics_json = Column(Text, nullable=True)
+
+    formula_version = Column(String(50), nullable=False, default="defense_energy_amplification_v1")
+
     experiment = relationship("Experiment", back_populates="amplification_results")
 
 

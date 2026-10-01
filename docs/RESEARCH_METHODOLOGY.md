@@ -317,6 +317,123 @@ Any changes to the calculation methodology will increment this version.
 
 ---
 
+## Defense Energy Amplification
+
+### Research Question
+
+How much additional energy does a security control add, and how much defense does each unit of attack workload buys per joule spent? Phase 7 quantifies the energy price of defense.
+
+**Distinction from earlier phases:**
+
+| Phase | Question | Formula |
+|---|---|---|
+| Phase 5 (Attribution) | How much energy does the attack itself consume above idle? | ΔE = E_attack − E_idle |
+| Phase 6 (Interaction) | Do two controls combined cost more or less than the sum of their parts? | I(A,B) = E_AB − E_A − E_B + E_0 |
+| Phase 7 (Amplification) | How much extra energy does defense cost, and what is that cost per unit of attack workload? | ADE = E_attack+defense − E_attack+baseline; DEA = ADE / workload |
+
+### Experimental Design
+
+A defense-amplification experiment compares two controlled configurations:
+
+| Configuration | Symbol | Security Controls |
+|---|---|---|
+| Attack baseline | E_attack+baseline | None |
+| Attack + defense | E_attack+defense | One security control (firewall, ids, waf, ...) |
+
+All comparability requirements from Phase 6 apply (attack type, intensity, workload value, workload unit, duration, environment, software/config version, measurement mode, energy provider, trial alignment). Only the security-control configuration may differ; identical baseline and defense configurations are rejected because the amplification would be trivially zero.
+
+### ADE and DEA Formulas
+
+```
+ADE = E_attack+defense − E_attack+baseline          (joules, per trial)
+DEA = ADE / Attack_Workload                          (joules per workload unit)
+```
+
+Where:
+- ADE = Attack Defense Energy (additional energy attributable to the defense)
+- DEA = Defense Energy Amplification
+- Attack_Workload = workload value of the matched attack run (e.g., 500 packets/sec)
+
+Zero, negative, or missing workload values are rejected: DEA cannot be computed without a positive workload. Negative ADE (defense saves energy) is valid and recorded as-is.
+
+Power and carbon forms:
+
+```
+P_ADE = ADE / duration_seconds                       (watts)
+C_ADE = C_attack+defense − C_attack+baseline         (kg CO2, same carbon methodology as Phases 5–6)
+```
+
+### Trial Pairing
+
+Multiple trials are paired by trial number across the two configurations:
+
+```
+Trial 1: ADE_1 = E_d,1 − E_b,1
+Trial 2: ADE_2 = E_d,2 − E_b,2
+Trial 3: ADE_3 = E_d,3 − E_b,3
+```
+
+Run counts must match across the two lists and trial numbers must align. Unpaired or mismatched trials are rejected.
+
+### Descriptive Statistics
+
+Statistics are calculated over the per-trial values:
+
+| Statistic | Description |
+|---|---|
+| Mean | Average amplification |
+| Median | Middle value |
+| Standard deviation | Population spread of values |
+| Minimum | Smallest amplification value |
+| Maximum | Largest amplification value |
+
+Statistics are reported for amplification energy (ADE), amplification ratio (DEA), power amplification, and amplification carbon. **No hypothesis testing or statistical significance claims are made.**
+
+### Measurement Modes
+
+Every result preserves its measurement mode and energy provider (Phase 6 rules apply unchanged):
+
+| Mode | Description | Status |
+|---|---|---|
+| ESTIMATED | Deterministic estimation model | **Currently active** |
+| MEASURED | Hardware measurement | Requires provider |
+| SIMULATED | Simulated reading | Simulated only |
+
+**Important**: Current results are ESTIMATED unless a real energy measurement provider is configured. Estimated energy is never called measured energy, and no hardware measurements are fabricated.
+
+### Carbon Calculation
+
+Uses the existing CarbonGuard carbon methodology (no second formula):
+
+```
+energy_kWh = energy_joules / 3,600,000
+gross_CO2_kg = energy_kWh × carbon_intensity_g_per_kWh / 1000
+```
+
+Carbon is computed for both configurations with `calculate_carbon(..., renewable_percentage=0)` (gross CO2 only), and the amplification carbon is the difference. Default carbon intensity: 475 gCO2/kWh (configurable per calculation).
+
+### Reproducibility
+
+The calculation is a pure deterministic function of the two energy values, workload, duration, and carbon intensity. Repeated computations over identical inputs produce identical outputs. The estimation provider is deterministic and linear in control count; no randomness is used in the energy path.
+
+### Formula Version
+
+Current formula version: `defense_energy_amplification_v1`
+
+Any changes to the calculation methodology will increment this version.
+
+### Limitations
+
+1. **ESTIMATED data**: All current energy values are estimates, not hardware measurements
+2. **Linear estimation model**: Estimated runs typically produce a small positive ADE proportional to control count
+3. **Single control at a time**: Phase 7 measures one defense configuration against the attack baseline; control-to-control interaction is Phase 6
+4. **No significance testing**: Descriptive statistics only
+5. **Simulation-based context**: Attack workload and effectiveness come from simulation, not real attacks or real security systems
+6. **Single host**: All measurements assume a single computing environment
+7. **Safe synthetic simulation only**: No real attacks are executed and no real systems are scanned
+
+---
+
 ## Experiment Lifecycle
 
 ```
