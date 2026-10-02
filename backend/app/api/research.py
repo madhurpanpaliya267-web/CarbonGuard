@@ -17,6 +17,11 @@ from app.services.defense_energy_amplification_service import (
     DefenseEnergyAmplificationService,
     DefenseEnergyAmplificationError,
 )
+from app.services.research_analytics_service import (
+    ResearchAnalyticsService,
+    AnalyticsValidationError,
+    AnalyticsInsufficientDataError,
+)
 from app.schemas.research import (
     ExperimentCreateRequest,
     ExperimentResponse,
@@ -39,6 +44,9 @@ from app.schemas.research import (
     DefenseAmplificationComputeResponse,
     DefenseAmplificationResponse,
     DefenseAmplificationListResponse,
+    ResearchAnalyticsRequest,
+    ResearchAnalyticsResponse,
+    ResearchAnalyticsListResponse,
 )
 
 router = APIRouter()
@@ -346,5 +354,51 @@ def get_defense_energy_amplification(
         raise HTTPException(
             status_code=404,
             detail=f"Defense amplification not found: {amplification_id}",
+        )
+    return response
+
+
+@router.post(
+    "/analytics",
+    response_model=ResearchAnalyticsResponse,
+    status_code=201,
+)
+def compute_research_analytics(
+    request: ResearchAnalyticsRequest, db: Session = Depends(get_db)
+):
+    service = ResearchAnalyticsService(db)
+    try:
+        return service.analyze(request)
+    except AnalyticsValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except AnalyticsInsufficientDataError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/analytics", response_model=ResearchAnalyticsListResponse)
+def list_research_analytics(
+    source: str = None,
+    metric: str = None,
+    offset: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    service = ResearchAnalyticsService(db)
+    return service.list_analyses(
+        source=source, metric=metric, offset=offset, limit=limit
+    )
+
+
+@router.get(
+    "/analytics/{analysis_id}",
+    response_model=ResearchAnalyticsResponse,
+)
+def get_research_analytics(analysis_id: str, db: Session = Depends(get_db)):
+    service = ResearchAnalyticsService(db)
+    response = service.get_analysis(analysis_id)
+    if not response:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Analytics result not found: {analysis_id}",
         )
     return response

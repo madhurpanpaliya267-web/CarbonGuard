@@ -434,6 +434,213 @@ Any changes to the calculation methodology will increment this version.
 
 ---
 
+## Research Analytics and Statistical Analysis
+
+### Research Question
+
+Given results that Phase 5-7 already persisted, what do the observed values look like descriptively, and — where the sample actually supports it — how precisely can a difference or ratio metric be summarized, and what does an appropriate paired test report?
+
+Phase 8 does **not** recompute energy, carbon, marginal, interaction, or amplification values. It reads the existing result tables (`energy_attributions`, `interaction_results`, `defense_amplification_results`) and derives statistics from them. The Phase 5-7 formulas are unchanged and are not duplicated:
+
+| Phase | Formula |
+|---|---|
+| Phase 5 | ΔE = E_security − E_baseline |
+| Phase 6 | I(A,B) = E_AB − E_A − E_B + E_0 |
+| Phase 7 | ADE = E_attack+defense − E_attack+baseline |
+| Phase 8 | descriptive and inferential statistics **over** the values produced above |
+
+### Analytics Architecture
+
+```
+POST/GET /api/v1/research/analytics      (thin routes, app/api/research.py)
+        ↓
+ResearchAnalyticsService                 (app/services/research_analytics_service.py)
+  - request validation, data-quality checks
+  - metric categorisation, grouping, orchestration
+  - persistence of config hash + derived response
+        ↓
+statistics engine                        (app/engines/analytics/statistics.py)
+  - pure Python, no numpy/scipy, no randomness
+        ↓
+existing repositories                    (EnergyAttribution, InteractionResult,
+                                          DefenseAmplificationResult)
+ResearchAnalyticsResultRepository        (stores derived rows only)
+```
+
+Layering follows the project rule: routes parse and delegate, services own validation and orchestration, the engine owns computation, repositories own CRUD.
+
+`ResearchAnalyticsResult` stores only the canonical request configuration and the derived response. Raw observations stay in the Phase 5-7 tables; analytics rows never duplicate measurement data.
+
+### Supported Statistics
+
+Descriptive statistics are computed for every analysis, per group and overall:
+
+| Statistic | Definition |
+|---|---|
+| count | n |
+| mean | Σx / n |
+| median | middle value (mean of two middles when n is even) |
+| standard deviation | **population** convention: √(Σ(x − mean)² / n) |
+| minimum | min(x) |
+| maximum | max(x) |
+
+The population convention (divide by `n`) is reported in every response as `std_dev_convention = population_standard_deviation_n` and matches the existing Phase 6/7 descriptive helper exactly, so analytics output and stored Phase 5-7 statistics agree.
+
+The sample convention (`sample_standard_deviation_n_minus_1`) is used **only** inside the Student-t confidence interval, the paired t-test, and Cohen's dz, where the method is defined with n − 1 degrees of freedom. Both conventions are always labelled; they are never mixed silently.
+
+### Sources and Metric Categories
+
+| Source | Result table | Example metrics |
+|---|---|---|
+| `marginal` | `energy_attributions` (Phase 5) | `marginal_energy_joules`, `marginal_carbon_kg`, `baseline_energy_joules`, … |
+| `interaction` | `interaction_results` (Phase 6) | `interaction_effect`, `interaction_index`, `energy_ab`, … |
+| `amplification` | `defense_amplification_results` (Phase 7) | `additional_defense_energy`, `defense_energy_amplification`, `energy_attack_only`, … |
+
+Each metric is classified:
+
+- **difference** — paired-difference metrics (ΔE-style). Testable.
+- **ratio** — dimensionless or per-workload ratios (e.g. `interaction_index`, `defense_energy_amplification`). Testable.
+- **level** — absolute quantities (e.g. `energy_attack_only`, `duration_seconds`). Descriptive only; a hypothesis test on a level metric is rejected with HTTP 400 because it is not a paired comparison.
+
+Only metrics that exist on the selected source's table are accepted; a metric from the wrong source, an unknown source, or an unknown metric is rejected with HTTP 400.
+
+### Grouped Analysis
+
+`group_by` accepts up to 5 dimensions per source (for example `attack_type`, `attack_intensity`, `workload_unit`, `measurement_mode`, plus `control_name` / `control_a` / `control_b` / `energy_provider` where the source has them). Groups are keyed by string, sorted lexicographically, and each group reports its own count, statistics, confidence interval, hypothesis test, and warnings.
+
+Grouping is also the prescribed remedy when an overall interval or test is withheld because the selection mixes attack contexts (see *Data-quality validation*).
+
+### Paired Analysis and Paired Differences
+
+Phase 8 analyses are paired by construction: every source row already represents one comparison (baseline run vs. treatment run, or the four-run interaction quartet).
+
+- `paired_differences` returns the ordered list of observed differences/ratios for testable metrics, in deterministic row order (ascending result id). For level metrics it is `null`.
+- When a hypothesis test is requested, the service first verifies that every selected row carries the run identifiers that make the pairing valid (`baseline_run_id` + `security_run_id`, `baseline_run_id` + `control_a_run_id` + `control_b_run_id` + `combined_run_id`, or `baseline_run_id` + `defense_run_id`). Rows missing those identifiers are rejected with HTTP 400 rather than being silently treated as independent samples.
+- Without a hypothesis test, unpaired rows are allowed and only descriptive statistics are produced.
+
+### Confidence Intervals
+
+A two-sided Student-t interval for the mean is computed by default (`include_confidence_interval = true`, `confidence_level = 0.95`, any level strictly between 0 and 1):
+
+- Uses the sample standard deviation and n − 1 degrees of freedom.
+- `n = 1`: reported as `status = "omitted"` with an explicit reason — a t-interval with zero degrees of freedom is not computed.
+- Zero variance: interval degenerates to the mean (lower = upper = mean), still reported as `ok`.
+- Mixed attack contexts in the selection: the overall interval is `omitted` with a reason telling the caller to use `group_by`.
+
+The response always records level, n, status, method (`student_t_interval`), standard error, degrees of freedom, and critical value — an omitted interval is never silently replaced by a number.
+
+### Hypothesis Testing
+
+Two paired tests are supported, selected with `hypothesis_test`:
+
+| Test id | Method | Null hypothesis | Assumptions |
+|---|---|---|---|
+| `paired_t` | one-sample Student-t on paired differences | mean paired difference = 0 | independent pairs; differences approximately normally distributed |
+| `wilcoxon_signed_rank` | Wilcoxon signed-rank on paired differences | median paired difference = 0 (symmetric difference distribution) | independent pairs; symmetric difference distribution |
+
+- `alternative` ∈ {`two-sided`, `greater`, `less`}; `significance_level` ∈ (0, 1), default 0.05.
+- `reject_null` is reported only when the test actually produced a p-value, and only as `p_value < significance_level`. The response labels it `reject_null` / `fail_to_reject_null` / `undefined`.
+- Wilcoxon uses exact sign enumeration for n ≤ 100 (deterministic dynamic program over doubled ranks, so tie-averaged ranks stay exact) and a normal approximation with continuity correction above that; the applied method is always reported in `method`.
+- Zero differences are excluded from Wilcoxon ranks following the standard convention and the excluded count is reported in `excluded_zero_differences` — never dropped silently.
+- Degenerate inputs return `status = "undefined"` with a reason instead of a fabricated p-value (all differences identical for the t-test; all differences zero or fewer than 2 non-zero differences for Wilcoxon).
+- A test is omitted with a warning when the selection has fewer than 2 paired observations or mixes attack contexts, and it is rejected with HTTP 400 for level metrics.
+
+**Significance is reported as a statistical result only.** A rejected null hypothesis never means a configuration is "better", "optimal", or "more efficient".
+
+### Effect-Size Reporting
+
+| Test | Effect size | Definition |
+|---|---|---|
+| `paired_t` | Cohen's dz | mean(d) / sample_std(d), n − 1 convention |
+| `wilcoxon_signed_rank` | matched-pairs rank-biserial r | (W⁺ − W⁻) / (W⁺ + W⁻) |
+
+Both are reported with status, reason, sample count, and an explicit convention string, and both are marked **descriptive only**: a non-zero effect size does not imply statistical significance. Every response that carries an effect size also carries a warning stating this.
+
+### Data-Quality Validation
+
+Validation failures raise HTTP 400 with an explicit reason:
+
+**Rejected (HTTP 400)**
+
+- unknown source, metric, hypothesis test, alternative, filter, or group dimension; duplicate group dimensions
+- no rows matched the selection → `AnalyticsInsufficientDataError`
+- missing or non-finite metric values
+- duplicate observation keys within the selection
+- mixed measurement modes (ESTIMATED vs. MEASURED vs. SIMULATED) — not comparable
+- mixed energy providers (interaction/amplification) — not comparable
+- mismatched workload units for a workload-dependent metric
+- non-positive workload for a per-workload ratio metric (division by zero)
+- unpaired rows when a hypothesis test is requested
+- level metric when a hypothesis test is requested
+
+**Warned (result still returned)**
+
+- aggregation across mismatched workload units for a non-workload-dependent metric
+- selection reached the 10 000-observation analysis cap (selection may be incomplete)
+- overall interval or test withheld over mixed attack contexts
+- inferential components omitted for small samples
+- effect size present (descriptive, not significance)
+
+### Sample-Size Limitations
+
+| Situation | Behaviour |
+|---|---|
+| n = 0 | HTTP 400, insufficient data |
+| n = 1 | descriptive statistics only; CI and test omitted with a stated reason |
+| n < 2 paired observations | hypothesis test omitted with a stated reason |
+| Wilcoxon with < 2 non-zero differences | `status = "undefined"` with reason |
+| zero variance in differences | t-test and Cohen's dz `status = "undefined"` with reason |
+| n > 100 (Wilcoxon) | exact test replaced by the documented normal approximation |
+
+No inference is invented for samples that cannot support it: the API returns a structured `omitted` / `undefined` status with a reason instead of a number.
+
+### Reproducibility
+
+- `analysis_id` = `anl_` + the first 16 hex characters of SHA-256 over the canonical (sorted, null-free) request configuration. The same configuration always maps to the same id.
+- Rows are fetched with an observation cap, post-filtered, then sorted by result id; groups are sorted lexicographically. No sampling, no ordering ambiguity, no randomness anywhere in the statistics engine.
+- Identical persisted inputs plus identical configuration produce byte-identical statistics, p-values, intervals, and group output — verified by repeat-request tests at engine, service, API, and live-server level.
+- Repeating a request updates the stored row in place instead of creating duplicates.
+- `analysis_version = research_analytics_v1`; any change to the analysis semantics increments it.
+
+### Estimated-Energy Limitations
+
+- In ESTIMATED mode (the current default) every analysed value comes from a deterministic estimation model, not a hardware meter. The response records `measurement_mode = "ESTIMATED"` and leads its `limitations` list with this fact.
+- Statistical analysis does not convert estimated energy into measured energy. A narrow confidence interval over estimated values is still an interval over estimates.
+- MEASURED rows record their `energy_provider` for provenance; mixing modes is rejected.
+
+### Synthetic-Attack Limitations
+
+- Attack workloads come from safe synthetic simulation. Results describe simulated attack profiles, not real attack behavior, and no real attacks are executed.
+- Security effectiveness inputs are simulated, not real security systems.
+- Statistical quantities are descriptive or inferential measures only: they do not establish causality, optimality, or universal generalization across hosts, workloads, or time.
+
+### API Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/v1/research/analytics` | compute and persist an analysis (201; 400 on validation/insufficient data) |
+| GET | `/api/v1/research/analytics` | list stored analyses, filterable by `source` and `metric` |
+| GET | `/api/v1/research/analytics/{analysis_id}` | fetch one stored analysis (404 if unknown) |
+
+### Formula Version
+
+Current analysis version: `research_analytics_v1`
+
+Any change to the analysis semantics will increment this version.
+
+### Limitations
+
+1. **ESTIMATED data**: current energy values are estimates, not hardware measurements
+2. **Simulation-based inputs**: attack workloads and effectiveness come from synthetic simulation
+3. **No causal claims**: significance and effect size describe the observed differences only
+4. **Small samples**: inferential output is withheld rather than fabricated below the stated thresholds
+5. **Single host**: all underlying measurements assume one computing environment
+6. **Observation cap**: analyses read at most 10 000 persisted results per request
+7. **No multiple-comparison correction**: grouped analyses report per-group p-values without family-wise correction
+8. **No frontend yet**: Phase 8 exposes the API only; the research analytics dashboard arrives in a later phase
+
+---
+
 ## Experiment Lifecycle
 
 ```

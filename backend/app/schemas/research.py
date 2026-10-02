@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Any, Optional, List, Dict
 from datetime import datetime
 
 
@@ -323,3 +323,110 @@ class DefenseAmplificationComputeResponse(BaseModel):
     total: int
     results: List[DefenseAmplificationResponse]
     statistics: DefenseAmplificationStatisticsResponse
+
+
+class ResearchAnalyticsFilters(BaseModel):
+    experiment_id: Optional[int] = None
+    attack_type: Optional[str] = Field(None, max_length=50)
+    attack_intensity: Optional[str] = Field(None, max_length=20)
+    measurement_mode: Optional[str] = Field(None, max_length=20)
+    workload_unit: Optional[str] = Field(None, max_length=50)
+    energy_provider: Optional[str] = Field(None, max_length=50)
+    control_name: Optional[str] = Field(None, max_length=50)
+    control_a: Optional[str] = Field(None, max_length=50)
+    control_b: Optional[str] = Field(None, max_length=50)
+
+
+class ResearchAnalyticsRequest(BaseModel):
+    source: str = Field(..., min_length=1, max_length=30)
+    metric: str = Field(..., min_length=1, max_length=60)
+    filters: ResearchAnalyticsFilters = ResearchAnalyticsFilters()
+    group_by: List[str] = Field(default_factory=list, max_length=5)
+    include_confidence_interval: bool = True
+    confidence_level: float = Field(0.95, gt=0, lt=1)
+    hypothesis_test: Optional[str] = Field(None, max_length=40)
+    alternative: str = Field("two-sided", max_length=20)
+    significance_level: float = Field(0.05, gt=0, lt=1)
+
+
+class AnalyticsConfidenceIntervalResponse(BaseModel):
+    level: float
+    n: int
+    status: str
+    reason: Optional[str] = None
+    lower: Optional[float] = None
+    upper: Optional[float] = None
+    mean: Optional[float] = None
+    standard_error: Optional[float] = None
+    degrees_of_freedom: Optional[int] = None
+    critical_value: Optional[float] = None
+    method: Optional[str] = None
+    std_dev_convention: Optional[str] = None
+
+
+class AnalyticsEffectSizeResponse(BaseModel):
+    name: str
+    value: Optional[float] = None
+    status: str
+    reason: Optional[str] = None
+    sample_count: int
+    convention: str
+
+
+class AnalyticsHypothesisTestResponse(BaseModel):
+    test_id: str
+    test_name: str
+    null_hypothesis: str
+    alternative_hypothesis: str
+    status: str
+    reason: Optional[str] = None
+    statistic: Optional[float] = None
+    p_value: Optional[float] = None
+    sample_count: int
+    excluded_zero_differences: int = 0
+    degrees_of_freedom: Optional[int] = None
+    significance_level: float
+    alternative: str
+    reject_null: Optional[bool] = None
+    interpretation: str
+    method: str
+    method_notes: str
+    effect_size: Optional[AnalyticsEffectSizeResponse] = None
+
+
+class AnalyticsGroupResponse(BaseModel):
+    group: Dict[str, str]
+    n: int
+    statistics: StatisticsSummary
+    confidence_interval: Optional[AnalyticsConfidenceIntervalResponse] = None
+    hypothesis_test: Optional[AnalyticsHypothesisTestResponse] = None
+    warnings: List[str] = Field(default_factory=list)
+
+
+class ResearchAnalyticsResponse(BaseModel):
+    analysis_id: str
+    analysis_version: str
+    source: str
+    metric: str
+    metric_category: str
+    filters: Dict[str, Any]
+    group_by: List[str]
+    n: int
+    statistics: StatisticsSummary
+    std_dev_convention: str
+    groups: List[AnalyticsGroupResponse] = Field(default_factory=list)
+    confidence_interval: Optional[AnalyticsConfidenceIntervalResponse] = None
+    hypothesis_test: Optional[AnalyticsHypothesisTestResponse] = None
+    paired_differences: Optional[List[float]] = None
+    measurement_mode: Optional[str] = None
+    energy_provider: Optional[str] = None
+    warnings: List[str] = Field(default_factory=list)
+    limitations: List[str] = Field(default_factory=list)
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ResearchAnalyticsListResponse(BaseModel):
+    total: int
+    items: List[ResearchAnalyticsResponse]

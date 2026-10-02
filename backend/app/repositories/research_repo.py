@@ -10,6 +10,7 @@ from app.models.research import (
     InteractionResult,
     DefenseAmplificationResult,
     EnergyAttribution,
+    ResearchAnalyticsResult,
 )
 from app.repositories.base import BaseRepository
 
@@ -282,5 +283,35 @@ class EnergyAttributionRepository(BaseRepository[EnergyAttribution]):
         if measurement_mode:
             query = query.where(EnergyAttribution.measurement_mode == measurement_mode)
         query = query.order_by(EnergyAttribution.created_at.desc()).offset(offset).limit(limit)
+        result = self.db.execute(query)
+        return list(result.scalars().all())
+
+
+class ResearchAnalyticsResultRepository(BaseRepository[ResearchAnalyticsResult]):
+    def __init__(self, db: Session):
+        super().__init__(ResearchAnalyticsResult, db)
+
+    def get_by_analysis_id(self, analysis_id: str) -> Optional[ResearchAnalyticsResult]:
+        query = select(ResearchAnalyticsResult).where(
+            ResearchAnalyticsResult.analysis_id == analysis_id
+        )
+        result = self.db.execute(query)
+        return result.scalars().first()
+
+    def filter_analyses(
+        self,
+        source: Optional[str] = None,
+        metric: Optional[str] = None,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> List[ResearchAnalyticsResult]:
+        query = select(ResearchAnalyticsResult)
+        if source:
+            query = query.where(ResearchAnalyticsResult.source == source)
+        if metric:
+            query = query.where(ResearchAnalyticsResult.metric == metric)
+        query = query.order_by(
+            ResearchAnalyticsResult.id.desc()
+        ).offset(offset).limit(limit)
         result = self.db.execute(query)
         return list(result.scalars().all())

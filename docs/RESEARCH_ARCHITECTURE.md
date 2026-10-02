@@ -890,7 +890,7 @@ After each phase: run tests, check TypeScript, verify API startup, verify fronte
 5. Dashboard analytics use random data — not connected to stored metrics
 6. Attack simulation is synthetic — not real-world attack traffic
 7. Estimation model coefficients are configurable but not calibrated to real hardware
-8. Statistical analysis limited to basic descriptive statistics
+8. Research analytics (Phase 8) covers descriptive statistics, confidence intervals, paired tests, and effect sizes; no multiple-comparison correction and no frontend analytics dashboard yet
 9. No real-time streaming — experiments are batch/synchronous
 10. Frontend builds may have unused code from original scaffold
 

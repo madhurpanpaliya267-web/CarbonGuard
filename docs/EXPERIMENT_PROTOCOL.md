@@ -171,5 +171,5 @@ If a trial fails:
 - Energy values are estimates (ESTIMATED mode) unless hardware providers are available
 - Security effectiveness metrics come from the simulation, not real security systems
 - No distributed execution — all experiments run locally
-- No statistical analysis engine yet (Phase 7)
-- No interaction effect calculation yet
+- Statistical analysis is descriptive/inferential over persisted results only (Phase 8); it does not change the measured or estimated energy values
+- Interaction effects and defense amplification are computed by the Phase 6 and Phase 7 services

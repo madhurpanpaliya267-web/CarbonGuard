@@ -256,3 +256,23 @@ class EnergyAttribution(Base):
     created_at = Column(DateTime, nullable=False, default=_utcnow, index=True)
 
     experiment = relationship("Experiment")
+
+
+class ResearchAnalyticsResult(Base):
+    """Phase 8: minimal persistence for reproducible research analytics.
+
+    Stores the analysis configuration hash and the derived analytics response.
+    Raw experimental observations stay in the Phase 5-7 result tables; this
+    table never duplicates measurement data.
+    """
+
+    __tablename__ = "research_analytics_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    analysis_id = Column(String(40), unique=True, index=True, nullable=False)
+    analysis_version = Column(String(50), nullable=False, default="research_analytics_v1")
+    source = Column(String(30), nullable=False, index=True)
+    metric = Column(String(60), nullable=False, index=True)
+    request_json = Column(Text, nullable=False)
+    response_json = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=_utcnow, index=True)
