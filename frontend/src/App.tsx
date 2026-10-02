@@ -10,6 +10,7 @@ import OptimizerPage from './features/optimizer/components/OptimizerPage'
 import RenewableEnergyPage from './features/renewable-energy/components/RenewableEnergyPage'
 import AiRecommendationsPage from './features/ai-recommendations/components/AiRecommendationsPage'
 import AnalyticsPage from './features/analytics/components/AnalyticsPage'
+import ResearchLabPage from './features/research-lab/components/ResearchLabPage'
 import EventsPage from './features/events/components/EventsPage'
 import SystemHealthPage from './features/system-health/components/SystemHealthPage'
 import SettingsPage from './features/settings/components/SettingsPage'
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="renewable-energy" element={<RenewableEnergyPage />} />
         <Route path="ai-recommendations" element={<AiRecommendationsPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
+        <Route path="research-lab" element={<ResearchLabPage />} />
         <Route path="events" element={<EventsPage />} />
         <Route path="system-health" element={<SystemHealthPage />} />
         <Route path="settings" element={<SettingsPage />} />
