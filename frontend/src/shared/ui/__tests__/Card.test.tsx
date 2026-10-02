@@ -51,7 +51,7 @@ describe('CardTitle', () => {
   it('applies correct styling classes', () => {
     render(<CardTitle>Title</CardTitle>)
     const title = screen.getByRole('heading', { level: 3 })
-    expect(title.className).toContain('text-lg')
+    expect(title.className).toContain('text-sm')
     expect(title.className).toContain('font-semibold')
   })
 })

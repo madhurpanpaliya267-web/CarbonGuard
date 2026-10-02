@@ -4,9 +4,9 @@ import { render } from '@/test/page-test-utils'
 import Sidebar from '../Sidebar'
 
 describe('Sidebar', () => {
-  it('renders the Carbon Guard title', () => {
+  it('renders the CarbonGuard title', () => {
     render(<Sidebar />)
-    expect(screen.getByText('Carbon Guard')).toBeInTheDocument()
+    expect(screen.getByText('CarbonGuard')).toBeInTheDocument()
   })
 
   it('renders all navigation items', () => {
@@ -38,7 +38,7 @@ describe('Sidebar', () => {
 
   it('renders version in footer', () => {
     render(<Sidebar />)
-    expect(screen.getByText('v1.0.0 - Demo Mode')).toBeInTheDocument()
+    expect(screen.getByText('v1.0.0 — Simulation Mode')).toBeInTheDocument()
   })
 
   it('collapses when toggle button clicked', () => {
@@ -46,6 +46,6 @@ describe('Sidebar', () => {
     const toggleBtn = container.querySelector('button.hidden.lg\\:flex')
     expect(toggleBtn).toBeInTheDocument()
     fireEvent.click(toggleBtn!)
-    expect(screen.queryByText('Carbon Guard')).not.toBeInTheDocument()
+    expect(screen.queryByText('CarbonGuard')).not.toBeInTheDocument()
   })
 })

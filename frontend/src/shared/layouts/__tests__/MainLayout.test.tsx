@@ -6,7 +6,7 @@ import MainLayout from '../MainLayout'
 describe('MainLayout', () => {
   it('renders the sidebar', () => {
     render(<MainLayout />)
-    expect(screen.getByText('Carbon Guard')).toBeInTheDocument()
+    expect(screen.getByText('CarbonGuard')).toBeInTheDocument()
   })
 
   it('renders the header', () => {

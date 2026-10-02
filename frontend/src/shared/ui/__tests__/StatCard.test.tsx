@@ -34,6 +34,6 @@ describe('StatCard', () => {
 
   it('defaults to primary color', () => {
     render(<StatCard title="Test" value="1" icon={Shield} />)
-    expect(screen.getByText('1')).toHaveClass('text-primary')
+    expect(screen.getByText('1')).toHaveClass('text-accent')
   })
 })

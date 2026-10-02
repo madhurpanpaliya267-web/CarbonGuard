@@ -11,7 +11,7 @@ describe('Button', () => {
   it('applies primary variant by default', () => {
     render(<Button>Primary</Button>)
     const button = screen.getByRole('button', { name: 'Primary' })
-    expect(button.className).toContain('bg-primary')
+    expect(button.className).toContain('bg-accent')
   })
 
   it('applies correct variant classes', () => {

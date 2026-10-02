@@ -11,7 +11,7 @@ describe('App routing', () => {
 
   it('renders sidebar navigation', () => {
     render(<App />)
-    expect(screen.getByText('Carbon Guard')).toBeInTheDocument()
+    expect(screen.getByText('CarbonGuard')).toBeInTheDocument()
     expect(screen.getByText('Security Monitor')).toBeInTheDocument()
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })
