@@ -1,23 +1,106 @@
-import { FlaskConical, Shield, Zap } from 'lucide-react'
+import { FlaskConical, FlaskConicalOff, GitMerge, Layers, Shield, Table2, Zap } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import PageHeader from '@/shared/ui/PageHeader'
 import { Card, CardTitle, CardContent } from '@/shared/ui/Card'
 import Badge from '@/shared/ui/Badge'
-import { SectionEmpty, SectionError } from './ResearchBits'
+import { SectionEmpty, SectionError, SectionLoading } from './ResearchBits'
 import ResearchOverview from './ResearchOverview'
 import CarbonContextSection from './CarbonContextSection'
-import MarginalEnergySection from './MarginalEnergySection'
-import InteractionSection from './InteractionSection'
-import AmplificationSection from './AmplificationSection'
 import StatisticsSection from './StatisticsSection'
 import ExperimentTrialsSection from './ExperimentTrialsSection'
 import { useResearchLabData } from '../hooks/useResearchLabData'
+import type { AttackProfile, SecurityControl } from '../types/research'
+
+interface NavItem {
+  to: string
+  title: string
+  description: string
+  icon: typeof FlaskConical
+}
+
+const RESEARCH_NAV: NavItem[] = [
+  {
+    to: '/research-lab/marginal-energy',
+    title: 'Marginal Energy',
+    description: 'ΔE attribution with workload, control and measurement filters.',
+    icon: Zap,
+  },
+  {
+    to: '/research-lab/interaction-analysis',
+    title: 'Interaction Analysis',
+    description: 'I(A,B) control pair effects with statistics and results table.',
+    icon: GitMerge,
+  },
+  {
+    to: '/research-lab/defense-amplification',
+    title: 'Defense Amplification',
+    description: 'ADE and DEA across controls, workloads and intensities.',
+    icon: FlaskConicalOff,
+  },
+  {
+    to: '/research-lab/experiments',
+    title: 'Experiments',
+    description: 'Run experiments, then browse history and per-trial results.',
+    icon: FlaskConical,
+  },
+  {
+    to: '/research-lab/dataset',
+    title: 'Research Dataset',
+    description: 'Joined result tables with CSV and JSON export.',
+    icon: Table2,
+  },
+  {
+    to: '/research-lab/statistics',
+    title: 'Statistics',
+    description: 'Phase 8 descriptive and inferential analysis stays below.',
+    icon: Layers,
+  },
+]
+
+function ResearchNav() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      {RESEARCH_NAV.map((item) => {
+        const Icon = item.icon
+        const isAnchor = item.to === '/research-lab/statistics'
+        const content = (
+          <>
+            <div className="flex items-center gap-2">
+              <Icon className="w-4 h-4 text-accent" />
+              <span className="text-sm font-semibold text-text-primary">{item.title}</span>
+            </div>
+            <p className="text-xs text-muted leading-relaxed mt-1">{item.description}</p>
+          </>
+        )
+        return isAnchor ? (
+          <a
+            key={item.to}
+            href="#statistical-analysis"
+            className="block bg-card border border-border rounded-md p-3 hover:border-accent/40 transition-colors"
+          >
+            {content}
+          </a>
+        ) : (
+          <Link
+            key={item.to}
+            to={item.to}
+            className="block bg-card border border-border rounded-md p-3 hover:border-accent/40 transition-colors"
+            data-testid={`research-nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+          >
+            {content}
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
 
 function ReferenceCatalog({
   attacks,
   controls,
 }: {
-  attacks: ReturnType<typeof useResearchLabData>['attacks']
-  controls: ReturnType<typeof useResearchLabData>['controls']
+  attacks: AttackProfile[]
+  controls: SecurityControl[]
 }) {
   if (attacks.length === 0 && controls.length === 0) return null
 
@@ -109,6 +192,29 @@ function ReferenceCatalog({
 export default function ResearchLabPage() {
   const data = useResearchLabData()
 
+  if (data.loading) {
+    return (
+      <div className="space-y-6" data-testid="research-lab-page">
+        <PageHeader
+          title="Research Lab"
+          subtitle="Phase 5–8 research analytics with Phase 10 carbon metrics: marginal energy, control interaction, defense amplification, carbon per workload, and statistics"
+          badge={
+            <Badge variant="warning" size="sm">
+              <span className="inline-block w-1.5 h-1.5 bg-warning rounded-full animate-pulse mr-1" />
+              SIMULATED DATA
+            </Badge>
+          }
+          actions={
+            <Badge variant="purple" size="md">
+              RULE-BASED ANALYTICS
+            </Badge>
+          }
+        />
+        <SectionLoading label="Loading research lab…" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6" data-testid="research-lab-page">
       <PageHeader
@@ -127,29 +233,15 @@ export default function ResearchLabPage() {
         }
       />
 
+      <ResearchNav />
+
       <ResearchOverview data={data} />
 
       <section aria-label="Carbon context">
         <CarbonContextSection />
       </section>
 
-      <section aria-label="Marginal energy attribution">
-        <MarginalEnergySection
-          items={data.marginal}
-          experiments={data.experiments}
-          error={data.errors.marginal}
-        />
-      </section>
-
-      <section aria-label="Security control interaction">
-        <InteractionSection items={data.interaction} error={data.errors.interaction} />
-      </section>
-
-      <section aria-label="Defense energy amplification">
-        <AmplificationSection items={data.amplification} error={data.errors.amplification} />
-      </section>
-
-      <section aria-label="Statistical analysis">
+      <section aria-label="Statistical analysis" id="statistical-analysis">
         <StatisticsSection />
       </section>
 

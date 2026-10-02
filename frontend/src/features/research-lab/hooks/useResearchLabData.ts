@@ -53,7 +53,7 @@ export interface ResearchLabData {
   amplification: AmplificationResult[]
 }
 
-export function useResearchLabData(): ResearchLabData {
+export function useResearchLabData(refreshKey = 0): ResearchLabData {
   const [loading, setLoading] = useState(true)
   const [errors, setErrors] = useState<ResearchErrors>(emptyErrors)
   const [experiments, setExperiments] = useState<Experiment[]>([])
@@ -99,7 +99,7 @@ export function useResearchLabData(): ResearchLabData {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [refreshKey])
 
   return { loading, errors, experiments, attacks, controls, marginal, interaction, amplification }
 }

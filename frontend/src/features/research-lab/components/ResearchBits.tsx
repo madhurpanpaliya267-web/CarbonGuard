@@ -71,3 +71,83 @@ export function StatTile({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
+
+export const controlClass =
+  'bg-card border border-border rounded-md px-3 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent/50'
+
+export interface FilterOption {
+  value: string
+  label: string
+}
+
+export function FilterSelect({
+  id,
+  label,
+  value,
+  onChange,
+  options,
+  allLabel = 'All',
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  options: FilterOption[]
+  allLabel?: string
+}) {
+  return (
+    <div className="flex flex-col gap-1 min-w-0">
+      <label htmlFor={id} className="text-[10px] uppercase tracking-wider text-muted">
+        {label}
+      </label>
+      <select
+        id={id}
+        className={controlClass}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">{allLabel}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+export function FilterBar({
+  title,
+  children,
+  onReset,
+  summary,
+}: {
+  title: string
+  children: ReactNode
+  onReset?: () => void
+  summary?: ReactNode
+}) {
+  return (
+    <div className="bg-card border border-border rounded-md p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs font-semibold text-text-primary">{title}</p>
+        <div className="flex items-center gap-3">
+          {summary && <span className="text-[11px] text-muted">{summary}</span>}
+          {onReset && (
+            <button
+              type="button"
+              onClick={onReset}
+              className="text-[11px] text-accent hover:text-accent-light"
+            >
+              Reset filters
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+        {children}
+      </div>
+    </div>
+  )
+}

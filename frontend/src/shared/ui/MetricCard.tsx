@@ -14,8 +14,8 @@ const colorMap = {
   primary: { bg: 'bg-accent/10', text: 'text-accent', border: 'border-accent/20', icon: 'text-accent' },
   danger: { bg: 'bg-danger/10', text: 'text-danger', border: 'border-danger/20', icon: 'text-danger' },
   warning: { bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/20', icon: 'text-warning' },
-  success: { bg: 'bg-accent/10', text: 'text-accent-light', border: 'border-accent/20', icon: 'text-accent-light' },
-  purple: { bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20', icon: 'text-purple-400' },
+  success: { bg: 'bg-success/10', text: 'text-success', border: 'border-success/20', icon: 'text-success' },
+  purple: { bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20', icon: 'text-violet-400' },
 }
 
 export default function MetricCard({ title, value, icon: Icon, color = 'primary', trend, subtitle, compact }: MetricCardProps) {

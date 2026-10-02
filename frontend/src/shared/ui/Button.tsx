@@ -10,7 +10,7 @@ const variantClasses = {
   primary: 'bg-accent text-background hover:bg-accent-light font-medium shadow-glow-sm hover:shadow-glow',
   secondary: 'bg-card border border-border text-text-primary hover:bg-card-hover hover:border-border-hover',
   danger: 'bg-danger/15 text-danger border border-danger/20 hover:bg-danger/25',
-  success: 'bg-accent/15 text-accent border border-accent/20 hover:bg-accent/25',
+  success: 'bg-success/15 text-success border border-success/20 hover:bg-success/25',
   ghost: 'text-muted hover:text-text-primary hover:bg-card',
 }
 

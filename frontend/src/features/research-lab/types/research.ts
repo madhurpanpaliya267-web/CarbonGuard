@@ -367,3 +367,88 @@ export interface ResearchAnalyticsRequest {
   alternative?: string
   significance_level?: number
 }
+
+export interface ResearchSummary {
+  total_experiments: number
+  total_trials: number
+  attack_types: string[]
+  security_controls: string[]
+  measurement_modes: string[]
+  estimated_trials: number
+  measured_trials: number
+  marginal_energy_observations: number
+  interaction_observations: number
+  amplification_observations: number
+  carbon_observations: number
+}
+
+export interface ResearchMetricBlock {
+  status: 'available' | 'unavailable' | string
+  reason: string | null
+  unit: string | null
+  observation_count: number
+  statistics: StatisticsSummary | null
+}
+
+export interface ResearchMetrics {
+  marginal_energy: ResearchMetricBlock
+  marginal_power: ResearchMetricBlock
+  marginal_carbon: ResearchMetricBlock
+  interaction_effect: ResearchMetricBlock
+  amplification_energy: ResearchMetricBlock
+  amplification_ratio: ResearchMetricBlock
+  std_dev_convention: string
+}
+
+export interface ExperimentCreateRequest {
+  name: string
+  description?: string | null
+  experiment_type: 'MARGINAL_ENERGY' | 'INTERACTION' | 'DEFENSE_AMPLIFICATION'
+  attack_type: string
+  attack_intensity: string
+  attack_workload?: number | null
+  workload_unit?: string | null
+  duration_seconds?: number
+  security_controls?: string[]
+  measurement_provider?: string
+  number_of_trials?: number
+  random_seed?: number | null
+  carbon_intensity?: number | null
+  renewable_pct?: number | null
+  notes?: string | null
+}
+
+export interface ExperimentStatus {
+  experiment_uuid: string
+  status: string
+  total_runs: number
+  completed_runs: number
+  failed_runs: number
+}
+
+export interface ExperimentRunListResponse {
+  total: number
+  items: ExperimentRun[]
+}
+
+export type ExportDataset =
+  | 'experiments'
+  | 'marginal_energy'
+  | 'interaction_effects'
+  | 'defense_amplification'
+
+export interface ResearchExportRecordCounts {
+  experiments: number
+  marginal_energy: number
+  interaction_effects: number
+  defense_amplification: number
+}
+
+export interface ResearchExportPayload {
+  exported_at: string
+  record_counts: ResearchExportRecordCounts
+  experiments: Experiment[]
+  marginal_energy: MarginalEnergyResult[]
+  interaction_effects: InteractionResult[]
+  defense_amplification: AmplificationResult[]
+}

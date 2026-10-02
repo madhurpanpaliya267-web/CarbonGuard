@@ -84,3 +84,32 @@ export function controlsLabel(controls: string | null | undefined): string {
   const trimmed = controls.trim()
   return trimmed.length > 0 ? trimmed : 'No security controls'
 }
+
+export function parseControls(controls: string | null | undefined): string[] {
+  if (!controls) return []
+  const trimmed = controls.trim()
+  if (!trimmed) return []
+  try {
+    const parsed = JSON.parse(trimmed)
+    if (Array.isArray(parsed)) return parsed.map((value) => String(value)).filter(Boolean)
+    if (typeof parsed === 'string') return parsed ? [parsed] : []
+  } catch {
+    return trimmed.split(',').map((value) => value.trim()).filter(Boolean)
+  }
+  return trimmed.split(',').map((value) => value.trim()).filter(Boolean)
+}
+
+export function distinctOptions(
+  values: Array<string | number | null | undefined>,
+  labelPrefix = '',
+): Array<{ value: string; label: string }> {
+  const seen = new Map<string, string>()
+  values.forEach((value) => {
+    if (value === null || value === undefined || value === '') return
+    const raw = String(value)
+    if (!seen.has(raw)) seen.set(raw, `${labelPrefix}${raw}`)
+  })
+  return [...seen.entries()]
+    .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+    .map(([value, label]) => ({ value, label }))
+}

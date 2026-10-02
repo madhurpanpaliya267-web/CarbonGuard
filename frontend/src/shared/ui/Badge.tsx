@@ -11,10 +11,10 @@ interface BadgeProps {
 const variantClasses: Record<BadgeVariant, string> = {
   danger: 'bg-danger/15 text-danger border-danger/20',
   warning: 'bg-warning/15 text-warning border-warning/20',
-  success: 'bg-accent/15 text-accent border-accent/20',
+  success: 'bg-success/15 text-success border-success/20',
   primary: 'bg-accent/15 text-accent border-accent/20',
   muted: 'bg-muted/15 text-muted border-muted/20',
-  purple: 'bg-purple-500/15 text-purple-400 border-purple-500/20',
+  purple: 'bg-violet-500/15 text-violet-400 border-violet-500/20',
 }
 
 export default function Badge({ children, variant = 'muted', size = 'sm' }: BadgeProps) {

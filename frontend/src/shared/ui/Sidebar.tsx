@@ -19,23 +19,58 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  GitBranch,
+  Waves,
+  Radio,
+  PlayCircle,
+  Table2,
+  type LucideIcon,
 } from 'lucide-react'
 
-const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/security', icon: Shield, label: 'Security Monitor' },
-  { to: '/attack-simulator', icon: Zap, label: 'Attack Simulator' },
-  { to: '/threats', icon: Target, label: 'Threats' },
-  { to: '/carbon', icon: Leaf, label: 'Carbon Monitor' },
-  { to: '/energy', icon: Battery, label: 'Energy Monitor' },
-  { to: '/optimizer', icon: Sliders, label: 'Carbon Optimizer' },
-  { to: '/renewable-energy', icon: Sun, label: 'Renewable Energy' },
-  { to: '/ai-recommendations', icon: Brain, label: 'AI Recommendations' },
-  { to: '/analytics', icon: BarChart3, label: 'Analytics' },
-  { to: '/research-lab', icon: FlaskConical, label: 'Research Lab' },
-  { to: '/events', icon: ScrollText, label: 'Event Logs' },
-  { to: '/system-health', icon: HeartPulse, label: 'System Health' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+interface NavItem {
+  to: string
+  icon: LucideIcon
+  label: string
+}
+
+interface NavSection {
+  title?: string
+  items: NavItem[]
+}
+
+const navSections: NavSection[] = [
+  {
+    items: [
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/security', icon: Shield, label: 'Security Monitor' },
+      { to: '/attack-simulator', icon: Zap, label: 'Attack Simulator' },
+      { to: '/threats', icon: Target, label: 'Threats' },
+      { to: '/carbon', icon: Leaf, label: 'Carbon Monitor' },
+      { to: '/energy', icon: Battery, label: 'Energy Monitor' },
+      { to: '/optimizer', icon: Sliders, label: 'Carbon Optimizer' },
+      { to: '/renewable-energy', icon: Sun, label: 'Renewable Energy' },
+      { to: '/ai-recommendations', icon: Brain, label: 'AI Recommendations' },
+      { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+    ],
+  },
+  {
+    title: 'Research',
+    items: [
+      { to: '/research-lab', icon: FlaskConical, label: 'Research Lab' },
+      { to: '/research-lab/marginal-energy', icon: Waves, label: 'Marginal Energy' },
+      { to: '/research-lab/interaction-analysis', icon: GitBranch, label: 'Interaction Analysis' },
+      { to: '/research-lab/defense-amplification', icon: Radio, label: 'Defense Amplification' },
+      { to: '/research-lab/experiments', icon: PlayCircle, label: 'Experiments' },
+      { to: '/research-lab/dataset', icon: Table2, label: 'Research Dataset' },
+    ],
+  },
+  {
+    items: [
+      { to: '/events', icon: ScrollText, label: 'Event Logs' },
+      { to: '/system-health', icon: HeartPulse, label: 'System Health' },
+      { to: '/settings', icon: Settings, label: 'Settings' },
+    ],
+  },
 ]
 
 export default function Sidebar() {
@@ -91,24 +126,33 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2 px-2">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              onClick={() => setMobileOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 text-sm rounded-md transition-all duration-150 mb-0.5 relative ${
-                  isActive
-                    ? 'bg-accent/10 text-accent-light border-l-2 border-accent ml-0'
-                    : 'text-muted hover:text-text-primary hover:bg-card border-l-2 border-transparent ml-0'
-                } ${collapsed ? 'justify-center' : ''}`
-              }
-              title={collapsed ? item.label : undefined}
-            >
-              <item.icon className="w-4 h-4 flex-shrink-0" />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </NavLink>
+          {navSections.map((section, sectionIndex) => (
+            <div key={section.title ?? `nav-${sectionIndex}`}>
+              {section.title && !collapsed && (
+                <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted/80">
+                  {section.title}
+                </p>
+              )}
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/' || item.to === '/research-lab'}
+                  onClick={() => setMobileOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2.5 text-sm rounded-md transition-all duration-150 mb-0.5 relative ${
+                      isActive
+                        ? 'bg-accent/10 text-accent-light border-l-2 border-accent ml-0'
+                        : 'text-muted hover:text-text-primary hover:bg-card border-l-2 border-transparent ml-0'
+                    } ${collapsed ? 'justify-center' : ''}`
+                  }
+                  title={collapsed ? item.label : undefined}
+                >
+                  <item.icon className="w-4 h-4 flex-shrink-0" />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 

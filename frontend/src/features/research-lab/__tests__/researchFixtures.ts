@@ -1,23 +1,23 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { screen, waitFor, fireEvent } from '@testing-library/react'
-import { render } from '@/test/page-test-utils'
-import ResearchLabPage from '../components/ResearchLabPage'
-import { researchMetrics, researchSummary } from './researchFixtures'
+import { vi } from 'vitest'
 import type {
   AmplificationResult,
   AttackProfile,
   EnergyMeasurement,
   Experiment,
   ExperimentRun,
+  ExperimentStatus,
   ExperimentSummary,
   InteractionResult,
   MarginalEnergyResult,
   ResearchAnalyticsResult,
+  ResearchExportPayload,
+  ResearchMetrics,
+  ResearchSummary,
   SecurityControl,
   SecurityEffectiveness,
 } from '../types/research'
 
-const experiment: Experiment = {
+export const experiment: Experiment = {
   id: 1,
   experiment_uuid: 'exp-uuid-1',
   name: 'DDoS Baseline vs WAF',
@@ -41,7 +41,7 @@ const experiment: Experiment = {
   notes: null,
 }
 
-const run: ExperimentRun = {
+export const run: ExperimentRun = {
   id: 11,
   run_uuid: 'run-uuid-0011',
   experiment_id: 1,
@@ -62,7 +62,7 @@ const run: ExperimentRun = {
   error_message: null,
 }
 
-const measurement: EnergyMeasurement = {
+export const measurement: EnergyMeasurement = {
   id: 101,
   run_id: 11,
   energy_joules: 1200.5,
@@ -76,7 +76,7 @@ const measurement: EnergyMeasurement = {
   timestamp: '2026-01-01T10:02:00Z',
 }
 
-const securityEffect: SecurityEffectiveness = {
+export const securityEffect: SecurityEffectiveness = {
   id: 201,
   run_id: 11,
   detection_rate: 0.92,
@@ -90,14 +90,14 @@ const securityEffect: SecurityEffectiveness = {
   controls_config: null,
 }
 
-const summary: ExperimentSummary = {
+export const summary: ExperimentSummary = {
   experiment,
   runs: [run],
   measurements: [measurement],
   security_effects: [securityEffect],
 }
 
-const attackProfile: AttackProfile = {
+export const attackProfile: AttackProfile = {
   attack_type: 'ddos',
   display_name: 'DDoS Flood',
   description: 'Synthetic flood profile',
@@ -107,7 +107,7 @@ const attackProfile: AttackProfile = {
   config_version: 'cfg-1',
 }
 
-const securityControl: SecurityControl = {
+export const securityControl: SecurityControl = {
   control_id: 'waf',
   display_name: 'Web Application Firewall',
   category: 'network',
@@ -117,7 +117,7 @@ const securityControl: SecurityControl = {
   enabled_by_default: true,
 }
 
-const marginal: MarginalEnergyResult = {
+export const marginal: MarginalEnergyResult = {
   id: 1,
   experiment_id: 1,
   baseline_run_id: 11,
@@ -152,7 +152,7 @@ const marginal: MarginalEnergyResult = {
   created_at: '2026-01-01T10:06:00Z',
 }
 
-const interaction: InteractionResult = {
+export const interaction: InteractionResult = {
   id: 5,
   experiment_id: 1,
   trial_number: 2,
@@ -199,7 +199,7 @@ const interaction: InteractionResult = {
   security_effectiveness: null,
 }
 
-const amplification: AmplificationResult = {
+export const amplification: AmplificationResult = {
   id: 3,
   experiment_id: 1,
   trial_number: 3,
@@ -239,14 +239,21 @@ const amplification: AmplificationResult = {
     amplification_energy: { mean: 350, median: 348, std_dev: 12, min: 330, max: 372, count: 5 },
     amplification_ratio: { mean: 3.5, median: 3.48, std_dev: 0.1, min: 3.3, max: 3.72, count: 5 },
     power_amplification: { mean: 5.8, median: 5.7, std_dev: 0.2, min: 5.5, max: 6.1, count: 5 },
-    carbon_amplification: { mean: 0.00004, median: 0.00004, std_dev: 0, min: 0.00004, max: 0.00004, count: 5 },
+    carbon_amplification: {
+      mean: 0.00004,
+      median: 0.00004,
+      std_dev: 0,
+      min: 0.00004,
+      max: 0.00004,
+      count: 5,
+    },
     formula_version: 'amplification-v1',
   },
   formula_version: 'amplification-v1',
   created_at: '2026-01-01T10:15:00Z',
 }
 
-const analyticsResult: ResearchAnalyticsResult = {
+export const analyticsResult: ResearchAnalyticsResult = {
   analysis_id: 'analysis-1',
   analysis_version: 'research-analytics-v1',
   source: 'marginal',
@@ -307,168 +314,133 @@ const analyticsResult: ResearchAnalyticsResult = {
   created_at: '2026-01-01T10:20:00Z',
 }
 
-const optimizerComparison = {
+export const researchSummary: ResearchSummary = {
+  total_experiments: 1,
+  total_trials: 1,
+  attack_types: ['ddos'],
+  security_controls: ['waf'],
+  measurement_modes: ['ESTIMATED'],
+  estimated_trials: 1,
+  measured_trials: 0,
+  marginal_energy_observations: 1,
+  interaction_observations: 1,
+  amplification_observations: 1,
+  carbon_observations: 1,
+}
+
+function block(status: 'available' | 'unavailable' = 'available', reason: string | null = null) {
+  return {
+    status,
+    reason,
+    unit: 'J',
+    observation_count: 1,
+    statistics: status === 'available'
+      ? { mean: 350, median: 350, std_dev: 12, min: 330, max: 372, count: 1 }
+      : null,
+  }
+}
+
+export const researchMetrics: ResearchMetrics = {
+  marginal_energy: block(),
+  marginal_power: block(),
+  marginal_carbon: { ...block(), unit: 'kg' },
+  interaction_effect: block(),
+  amplification_energy: block(),
+  amplification_ratio: { ...block(), unit: 'ratio' },
+  std_dev_convention: 'population',
+}
+
+export const experimentStatus: ExperimentStatus = {
+  experiment_uuid: experiment.experiment_uuid,
+  status: 'COMPLETED',
+  total_runs: 1,
+  completed_runs: 1,
+  failed_runs: 0,
+}
+
+export const exportPayload: ResearchExportPayload = {
+  exported_at: '2026-01-01T11:00:00Z',
+  record_counts: {
+    experiments: 1,
+    marginal_energy: 1,
+    interaction_effects: 1,
+    defense_amplification: 1,
+  },
+  experiments: [experiment],
+  marginal_energy: [marginal],
+  interaction_effects: [interaction],
+  defense_amplification: [amplification],
+}
+
+export const optimizerComparison = {
   before: { energy_kwh: 10, co2_kg: 4.75 },
   after: { energy_kwh: 9, co2_kg: 4.275 },
   comparison: { energy_saved: 1, co2_saved: 0.475, reduction_pct: 10 },
 }
 
-function jsonResponse(data: unknown) {
+export function ok(data: unknown) {
   return Promise.resolve({ ok: true, json: () => Promise.resolve(data) })
 }
 
-function mockResearchFetch() {
-  globalThis.fetch = vi.fn().mockImplementation((input: string, init?: RequestInit) => {
-    const url = String(input)
-    const method = init?.method ?? 'GET'
-
-    if (url.includes('/optimizer/comparison')) return jsonResponse(optimizerComparison)
-    if (url.includes('/research/summary')) return jsonResponse(researchSummary)
-    if (url.includes('/research/metrics')) return jsonResponse(researchMetrics)
-    if (url.includes('/summary')) return jsonResponse(summary)
-    if (url.includes('/experiments')) return jsonResponse({ total: 1, items: [experiment] })
-    if (url.includes('/attacks')) return jsonResponse({ attacks: [attackProfile] })
-    if (url.includes('/controls')) return jsonResponse({ controls: [securityControl] })
-    if (url.includes('/marginal-energy')) return jsonResponse({ total: 1, items: [marginal] })
-    if (url.includes('/interaction-effects'))
-      return jsonResponse({ total: 1, items: [interaction] })
-    if (url.includes('/defense-energy-amplification'))
-      return jsonResponse({ total: 1, items: [amplification] })
-    if (url.includes('/analytics') && method === 'POST') return jsonResponse(analyticsResult)
-    if (url.includes('/analytics')) return jsonResponse({ total: 1, items: [analyticsResult] })
-    return jsonResponse({})
-  })
+export function text(body: string) {
+  return Promise.resolve({ ok: true, text: () => Promise.resolve(body) })
 }
 
-describe('ResearchLabPage', () => {
-  beforeEach(() => {
-    mockResearchFetch()
+export interface FetchMockOptions {
+  csvBody?: string
+  exportCounts?: ResearchExportPayload['record_counts']
+  fail?: string[]
+}
+
+/**
+ * Routes every research endpoint used by the Phase 12 pages to fixture data.
+ * `fail` lists URL substrings that should reject, for error-state tests.
+ */
+export function installFetchMock(options: FetchMockOptions = {}) {
+  const failures = options.fail ?? []
+
+  globalThis.fetch = vi.fn().mockImplementation((input: string, init?: RequestInit) => {
+    const raw = String(input)
+    const path = raw.split('?')[0]
+    const method = init?.method ?? 'GET'
+
+    if (failures.some((needle) => raw.includes(needle))) {
+      return Promise.reject(new Error('Network error'))
+    }
+
+    if (path.endsWith('/optimizer/comparison')) return ok(optimizerComparison)
+    if (path.endsWith('/research/summary')) return ok(researchSummary)
+    if (path.endsWith('/research/metrics')) return ok(researchMetrics)
+
+    if (path.endsWith('/export/csv')) {
+      return text(options.csvBody ?? 'attack_type,marginal_energy_joules\nddos,350')
+    }
+    if (path.endsWith('/export/json')) {
+      return ok({
+        ...exportPayload,
+        record_counts: options.exportCounts ?? exportPayload.record_counts,
+      })
+    }
+
+    if (path.endsWith('/experiments')) {
+      return method === 'POST' ? ok(experiment) : ok({ total: 1, items: [experiment] })
+    }
+    if (path.endsWith('/execute')) return ok(experiment)
+    if (path.endsWith('/status')) return ok(experimentStatus)
+    if (path.endsWith('/runs')) return ok({ total: 1, items: [run] })
+    if (path.endsWith('/summary')) return ok(summary)
+    if (path.includes('/experiments/')) return ok(experiment)
+
+    if (path.endsWith('/attacks')) return ok({ attacks: [attackProfile] })
+    if (path.endsWith('/controls')) return ok({ controls: [securityControl] })
+    if (path.endsWith('/marginal-energy')) return ok({ total: 1, items: [marginal] })
+    if (path.endsWith('/interaction-effects')) return ok({ total: 1, items: [interaction] })
+    if (path.endsWith('/defense-energy-amplification')) return ok({ total: 1, items: [amplification] })
+    if (path.endsWith('/analytics') && method === 'POST') return ok(analyticsResult)
+    if (path.endsWith('/analytics')) return ok({ total: 1, items: [analyticsResult] })
+
+    return ok({})
   })
 
-  it('shows loading indicator while research data loads', () => {
-    render(<ResearchLabPage />)
-    expect(document.querySelector('.animate-spin')).toBeInTheDocument()
-  })
-
-  it('renders page header and simulation badges', async () => {
-    render(<ResearchLabPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Research Lab')).toBeInTheDocument()
-      expect(screen.getByText('SIMULATED DATA')).toBeInTheDocument()
-      expect(screen.getByText('RULE-BASED ANALYTICS')).toBeInTheDocument()
-    })
-  })
-
-  it('renders overview metrics after loading', async () => {
-    render(<ResearchLabPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Research Overview')).toBeInTheDocument()
-      expect(screen.getByText('Total Experiments')).toBeInTheDocument()
-      expect(screen.getByText('ESTIMATED ENERGY')).toBeInTheDocument()
-    })
-  })
-
-  it('links to each focused research section', async () => {
-    render(<ResearchLabPage />)
-    await waitFor(() => {
-      expect(screen.getByTestId('research-nav-marginal-energy')).toHaveAttribute(
-        'href',
-        '/research-lab/marginal-energy',
-      )
-      expect(screen.getByTestId('research-nav-interaction-analysis')).toHaveAttribute(
-        'href',
-        '/research-lab/interaction-analysis',
-      )
-      expect(screen.getByTestId('research-nav-defense-amplification')).toHaveAttribute(
-        'href',
-        '/research-lab/defense-amplification',
-      )
-      expect(screen.getByTestId('research-nav-experiments')).toHaveAttribute(
-        'href',
-        '/research-lab/experiments',
-      )
-      expect(screen.getByTestId('research-nav-research-dataset')).toHaveAttribute(
-        'href',
-        '/research-lab/dataset',
-      )
-    })
-  })
-
-  it('renders the Phase 8 statistics form and stored analyses', async () => {
-    render(<ResearchLabPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Statistical Analysis (Phase 8)')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /run analysis/i })).toBeInTheDocument()
-      expect(screen.getByText('Stored Analyses')).toBeInTheDocument()
-    })
-  })
-
-  it('runs an analysis and renders confidence interval and test results', async () => {
-    render(<ResearchLabPage />)
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /run analysis/i })).toBeInTheDocument()
-    })
-
-    fireEvent.click(screen.getByRole('button', { name: /run analysis/i }))
-
-    await waitFor(() => {
-      expect(screen.getByText('Analysis Result')).toBeInTheDocument()
-      expect(screen.getByText('Confidence Interval')).toBeInTheDocument()
-      expect(screen.getByText('Hypothesis Test')).toBeInTheDocument()
-      expect(screen.getByText('reject null')).toBeInTheDocument()
-    })
-  })
-
-  it('loads experiment trial detail after selecting an experiment', async () => {
-    render(<ResearchLabPage />)
-    await waitFor(() => {
-      expect(screen.getByLabelText('Experiment')).toBeInTheDocument()
-    })
-
-    fireEvent.change(screen.getByLabelText('Experiment'), {
-      target: { value: 'exp-uuid-1' },
-    })
-
-    await waitFor(() => {
-      expect(screen.getByText('DDoS Baseline vs WAF')).toBeInTheDocument()
-      expect(screen.getByText('1 of 1 runs shown')).toBeInTheDocument()
-    })
-  })
-
-  it('renders reference catalogues for attacks and controls', async () => {
-    render(<ResearchLabPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Synthetic Attack Profiles')).toBeInTheDocument()
-      expect(screen.getByText('DDoS Flood')).toBeInTheDocument()
-      expect(screen.getByText('Web Application Firewall')).toBeInTheDocument()
-    })
-  })
-
-  it('documents that carbon intensity is configured, not grid telemetry', async () => {
-    render(<ResearchLabPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText(/not live grid telemetry/).length).toBeGreaterThan(0)
-    })
-  })
-
-  it('renders optimized carbon context from the existing optimizer service', async () => {
-    render(<ResearchLabPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Carbon Context (Existing Optimizer)')).toBeInTheDocument()
-      expect(screen.getByText('Optimized Carbon')).toBeInTheDocument()
-      expect(screen.getByText('4.28 kg')).toBeInTheDocument()
-      expect(screen.getByText('475.0 g')).toBeInTheDocument()
-    })
-  })
-
-  it('shows a failed-source error when research requests fail', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
-    render(<ResearchLabPage />)
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('Research overview unavailable'),
-      ).toBeInTheDocument()
-    })
-  })
-})
+  return globalThis.fetch as ReturnType<typeof vi.fn>
+}

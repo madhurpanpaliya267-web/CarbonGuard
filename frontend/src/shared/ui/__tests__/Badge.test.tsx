@@ -55,7 +55,7 @@ describe('SeverityBadge', () => {
   it('renders LOW severity with success variant', () => {
     render(<SeverityBadge severity="LOW" />)
     const badge = screen.getByText('LOW')
-    expect(badge.className).toContain('bg-accent/15')
+    expect(badge.className).toContain('bg-success/15')
   })
 
   it('renders unknown severity with muted variant', () => {
@@ -75,7 +75,7 @@ describe('StatusBadge', () => {
   it('renders blocked status with success variant', () => {
     render(<StatusBadge status="blocked" />)
     const badge = screen.getByText('blocked')
-    expect(badge.className).toContain('bg-accent/15')
+    expect(badge.className).toContain('bg-success/15')
   })
 
   it('renders active status with danger variant', () => {
