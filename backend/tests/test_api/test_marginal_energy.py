@@ -54,7 +54,24 @@ class TestMarginalEnergyAPI:
             "carbon_intensity": 400.0,
         })
         assert response.status_code == 201
-        assert response.json()["carbon_intensity"] == 400.0
+        data = response.json()
+        assert data["carbon_intensity"] == 400.0
+        assert data["carbon_basis"] == "calculated_from_estimated_energy"
+        cpw = data["marginal_carbon_per_workload"]
+        assert cpw["status"] == "available"
+        assert cpw["unit"] == f"kg/{data['workload_unit']}"
+        assert cpw["value_kg"] == pytest.approx(
+            data["marginal_carbon_kg"] / data["workload_value"]
+        )
+
+    def test_compute_without_carbon_reports_basis_not_measured(self, client):
+        _, base_runs = _create_and_execute(client, "ddos", "low", [])
+        _, sec_runs = _create_and_execute(client, "ddos", "low", ["firewall"])
+        data = client.post("/api/v1/research/marginal-energy", json={
+            "baseline_run_id": base_runs[0]["id"],
+            "security_run_id": sec_runs[0]["id"],
+        }).json()
+        assert data["carbon_basis"] == "calculated_from_estimated_energy"
 
     def test_compute_mismatched_attack(self, client):
         _, base_runs = _create_and_execute(client, "ddos", "low", [])

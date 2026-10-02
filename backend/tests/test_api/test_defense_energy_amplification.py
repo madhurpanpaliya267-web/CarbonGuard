@@ -83,6 +83,13 @@ class TestComputeEndpoint:
             json=_compute_body(pair, carbon_intensity=300),
         ).json()["results"][0]
         assert row["carbon_intensity"] == 300
+        assert row["carbon_basis"] == "calculated_from_estimated_energy"
+        cpw = row["defense_carbon_per_workload"]
+        assert cpw["status"] == "available"
+        assert cpw["unit"] == f"kg/{row['workload_unit']}"
+        assert cpw["value_kg"] == pytest.approx(
+            row["amplification_carbon_kg"] / row["attack_workload"]
+        )
 
     def test_repeat_compute_deterministic(self, client):
         pair = _pair_ids(client)

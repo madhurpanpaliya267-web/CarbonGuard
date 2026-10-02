@@ -1,6 +1,11 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 from typing import Any, Optional, List, Dict
 from datetime import datetime
+
+from app.engines.carbon.carbon_calculator import (
+    calculate_carbon_per_workload,
+    carbon_basis_label,
+)
 
 
 class ExperimentCreateRequest(BaseModel):
@@ -128,6 +133,20 @@ class MarginalEnergyComputeRequest(BaseModel):
     carbon_intensity: Optional[float] = Field(None, ge=0)
 
 
+class CarbonPerWorkloadResponse(BaseModel):
+    """Derived carbon-per-attack-workload metric (never persisted).
+
+    ``status`` is ``available`` only when the carbon value, workload value and
+    workload unit are all present and the workload is strictly positive.
+    Otherwise ``value_kg`` is null and ``reason`` explains why.
+    """
+
+    value_kg: Optional[float] = None
+    unit: Optional[str] = None
+    status: str
+    reason: Optional[str] = None
+
+
 class MarginalEnergyResponse(BaseModel):
     id: int
     experiment_id: int
@@ -154,6 +173,20 @@ class MarginalEnergyResponse(BaseModel):
     measurement_mode: str
     formula_version: str
     created_at: datetime
+
+    @computed_field
+    @property
+    def marginal_carbon_per_workload(self) -> CarbonPerWorkloadResponse:
+        return CarbonPerWorkloadResponse(
+            **calculate_carbon_per_workload(
+                self.marginal_carbon_kg, self.workload_value, self.workload_unit
+            )
+        )
+
+    @computed_field
+    @property
+    def carbon_basis(self) -> str:
+        return carbon_basis_label(self.measurement_mode)
 
     model_config = {"from_attributes": True}
 
@@ -241,6 +274,20 @@ class InteractionEffectResponse(BaseModel):
     created_at: datetime
     security_effectiveness: Optional[InteractionSecurityEffectivenessResponse] = None
 
+    @computed_field
+    @property
+    def interaction_carbon_per_workload(self) -> CarbonPerWorkloadResponse:
+        return CarbonPerWorkloadResponse(
+            **calculate_carbon_per_workload(
+                self.interaction_carbon_kg, self.workload_value, self.workload_unit
+            )
+        )
+
+    @computed_field
+    @property
+    def carbon_basis(self) -> str:
+        return carbon_basis_label(self.measurement_mode)
+
     model_config = {"from_attributes": True}
 
 
@@ -310,6 +357,20 @@ class DefenseAmplificationResponse(BaseModel):
     statistics: Optional[DefenseAmplificationStatisticsResponse] = None
     formula_version: str
     created_at: datetime
+
+    @computed_field
+    @property
+    def defense_carbon_per_workload(self) -> CarbonPerWorkloadResponse:
+        return CarbonPerWorkloadResponse(
+            **calculate_carbon_per_workload(
+                self.amplification_carbon_kg, self.attack_workload, self.workload_unit
+            )
+        )
+
+    @computed_field
+    @property
+    def carbon_basis(self) -> str:
+        return carbon_basis_label(self.measurement_mode)
 
     model_config = {"from_attributes": True}
 

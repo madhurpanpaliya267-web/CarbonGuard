@@ -139,6 +139,13 @@ const marginal: MarginalEnergyResult = {
   security_carbon_kg: 0.000158,
   marginal_carbon_kg: 0.000041,
   carbon_intensity: 420,
+  marginal_carbon_per_workload: {
+    value_kg: 0.00000041,
+    unit: 'kg/req/s',
+    status: 'available',
+    reason: null,
+  },
+  carbon_basis: 'calculated_from_estimated_energy',
   measurement_mode: 'ESTIMATED',
   formula_version: 'marginal-energy-v1',
   created_at: '2026-01-01T10:06:00Z',
@@ -179,6 +186,13 @@ const interaction: InteractionResult = {
   carbon_intensity: 420,
   energy_provider: 'simulated-grid',
   measurement_mode: 'ESTIMATED',
+  interaction_carbon_per_workload: {
+    value_kg: 0.00000017,
+    unit: 'kg/req/s',
+    status: 'available',
+    reason: null,
+  },
+  carbon_basis: 'calculated_from_estimated_energy',
   formula_version: 'interaction-v1',
   created_at: '2026-01-01T10:10:00Z',
   security_effectiveness: null,
@@ -213,6 +227,13 @@ const amplification: AmplificationResult = {
   software_version: 'v0.8',
   configuration_version: 'cfg-1',
   num_paired_trials: 5,
+  defense_carbon_per_workload: {
+    value_kg: 0.00000041,
+    unit: 'kg/req/s',
+    status: 'available',
+    reason: null,
+  },
+  carbon_basis: 'calculated_from_estimated_energy',
   statistics: {
     amplification_energy: { mean: 350, median: 348, std_dev: 12, min: 330, max: 372, count: 5 },
     amplification_ratio: { mean: 3.5, median: 3.48, std_dev: 0.1, min: 3.3, max: 3.72, count: 5 },
@@ -285,6 +306,12 @@ const analyticsResult: ResearchAnalyticsResult = {
   created_at: '2026-01-01T10:20:00Z',
 }
 
+const optimizerComparison = {
+  before: { energy_kwh: 10, co2_kg: 4.75 },
+  after: { energy_kwh: 9, co2_kg: 4.275 },
+  comparison: { energy_saved: 1, co2_saved: 0.475, reduction_pct: 10 },
+}
+
 function jsonResponse(data: unknown) {
   return Promise.resolve({ ok: true, json: () => Promise.resolve(data) })
 }
@@ -294,6 +321,7 @@ function mockResearchFetch() {
     const url = String(input)
     const method = init?.method ?? 'GET'
 
+    if (url.includes('/optimizer/comparison')) return jsonResponse(optimizerComparison)
     if (url.includes('/summary')) return jsonResponse(summary)
     if (url.includes('/experiments')) return jsonResponse({ total: 1, items: [experiment] })
     if (url.includes('/attacks')) return jsonResponse({ attacks: [attackProfile] })
@@ -410,6 +438,36 @@ describe('ResearchLabPage', () => {
       expect(screen.getByText('Synthetic Attack Profiles')).toBeInTheDocument()
       expect(screen.getByText('DDoS Flood')).toBeInTheDocument()
       expect(screen.getByText('Web Application Firewall')).toBeInTheDocument()
+    })
+  })
+
+  it('renders carbon per workload and carbon basis for each research source', async () => {
+    render(<ResearchLabPage />)
+    await waitFor(() => {
+      expect(screen.getByText('Marginal Carbon per Workload')).toBeInTheDocument()
+      expect(screen.getByText('Defense Carbon per Workload')).toBeInTheDocument()
+      expect(screen.getByText('Interaction Carbon per Workload')).toBeInTheDocument()
+      expect(screen.getAllByText('410.0 µg/req/s').length).toBeGreaterThanOrEqual(2)
+      expect(
+        screen.getAllByText('calculated from estimated energy').length,
+      ).toBeGreaterThanOrEqual(3)
+    })
+  })
+
+  it('documents that carbon intensity is configured, not grid telemetry', async () => {
+    render(<ResearchLabPage />)
+    await waitFor(() => {
+      expect(screen.getAllByText(/not live grid telemetry/).length).toBeGreaterThan(0)
+    })
+  })
+
+  it('renders optimized carbon context from the existing optimizer service', async () => {
+    render(<ResearchLabPage />)
+    await waitFor(() => {
+      expect(screen.getByText('Carbon Context (Existing Optimizer)')).toBeInTheDocument()
+      expect(screen.getByText('Optimized Carbon')).toBeInTheDocument()
+      expect(screen.getByText('4.28 kg')).toBeInTheDocument()
+      expect(screen.getByText('475.0 g')).toBeInTheDocument()
     })
   })
 

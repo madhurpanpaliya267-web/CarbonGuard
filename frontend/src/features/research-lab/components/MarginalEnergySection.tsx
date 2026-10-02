@@ -15,7 +15,11 @@ import { chartConfig } from '@/shared/utils/chartConfig'
 import { formatDateTime, formatNumber } from '@/shared/utils/formatters'
 import { Field, FieldGrid, FormulaNote, SectionEmpty, SectionError } from './ResearchBits'
 import {
+  CARBON_INTENSITY_NOTE,
+  carbonBasisLabel,
+  carbonPerWorkloadReason,
   controlsLabel,
+  formatCarbonPerWorkload,
   formatInteger,
   formatJoules,
   formatKilograms,
@@ -158,7 +162,22 @@ export default function MarginalEnergySection({ items, experiments, error }: Pro
                 <Field label="Baseline Carbon" value={formatKilograms(selected.baseline_carbon_kg)} />
                 <Field label="Security Carbon" value={formatKilograms(selected.security_carbon_kg)} />
                 <Field label="Carbon Difference ΔC" value={formatKilograms(selected.marginal_carbon_kg)} />
+                <Field
+                  label="Marginal Carbon per Workload"
+                  value={formatCarbonPerWorkload(selected.marginal_carbon_per_workload)}
+                />
+                <Field
+                  label="Carbon Basis"
+                  value={<span className="text-xs">{carbonBasisLabel(selected.carbon_basis)}</span>}
+                />
               </FieldGrid>
+              {carbonPerWorkloadReason(selected.marginal_carbon_per_workload) && (
+                <p className="text-[11px] text-warning mt-2">
+                  Carbon per workload unavailable:{' '}
+                  {carbonPerWorkloadReason(selected.marginal_carbon_per_workload)}
+                </p>
+              )}
+              <p className="text-[11px] text-muted mt-2">{CARBON_INTENSITY_NOTE}</p>
             </div>
           </div>
 

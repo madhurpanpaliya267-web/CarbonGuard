@@ -811,3 +811,95 @@ class TestResponseMetadata:
         assert result.hypothesis_test.p_value is None
         assert result.hypothesis_test.interpretation == "undefined"
         assert "zero variance" in result.hypothesis_test.reason
+
+
+class TestCarbonPerWorkloadMetrics:
+    """Phase 10: carbon-per-attack-workload is derived at read time."""
+
+    def test_amplification_metric_derived_from_stored_fields(
+        self, analytics_svc, db_session
+    ):
+        _amp_row(db_session, amplification_carbon_kg=0.5, attack_workload=500.0)
+        _amp_row(db_session, amplification_carbon_kg=1.5, attack_workload=500.0)
+        response = analytics_svc.analyze(
+            _req("amplification", "defense_carbon_per_workload")
+        )
+        assert response.metric_category == "ratio"
+        assert response.statistics.count == 2
+        assert response.statistics.mean == pytest.approx((0.5 + 1.5) / 2 / 500.0)
+
+    def test_interaction_metric_derived_from_stored_fields(
+        self, analytics_svc, db_session
+    ):
+        _interaction_row(
+            db_session, interaction_carbon_kg=0.25, workload_value=100.0
+        )
+        _interaction_row(
+            db_session, interaction_carbon_kg=0.5, workload_value=100.0
+        )
+        response = analytics_svc.analyze(
+            _req("interaction", "interaction_carbon_per_workload")
+        )
+        assert response.statistics.mean == pytest.approx(
+            (0.25 + 0.5) / 2 / 100.0
+        )
+
+    def test_marginal_metric_matches_stored_carbon(
+        self, analytics_svc, db_session, research_svc, marginal_svc
+    ):
+        from app.models.research import EnergyAttribution
+
+        _seed_attribution(db_session, marginal_svc, research_svc, trials=2)
+        response = analytics_svc.analyze(
+            _req("marginal", "marginal_carbon_per_workload")
+        )
+        rows = db_session.query(EnergyAttribution).all()
+        expected = [r.marginal_carbon_kg / r.workload_value for r in rows]
+        assert response.statistics.count == len(expected)
+        assert response.statistics.mean == pytest.approx(sum(expected) / len(expected))
+
+    def test_zero_workload_rejected_with_reason(self, analytics_svc, db_session):
+        _amp_row(db_session, amplification_carbon_kg=0.5, attack_workload=0.0)
+        with pytest.raises(AnalyticsValidationError) as exc:
+            analytics_svc.analyze(_req("amplification", "defense_carbon_per_workload"))
+        assert "carbon-per-workload" in str(exc.value)
+        assert "zero" in str(exc.value)
+
+    def test_missing_carbon_rejected_with_reason(self, analytics_svc, db_session):
+        _amp_row(db_session, amplification_carbon_kg=None, attack_workload=500.0)
+        with pytest.raises(AnalyticsValidationError) as exc:
+            analytics_svc.analyze(_req("amplification", "defense_carbon_per_workload"))
+        assert "not available" in str(exc.value)
+
+    def test_mismatched_workload_units_rejected(self, analytics_svc, db_session):
+        _amp_row(db_session, amplification_carbon_kg=0.5, attack_workload=500.0)
+        _amp_row(
+            db_session,
+            amplification_carbon_kg=0.5,
+            attack_workload=500.0,
+            workload_unit="requests_per_second",
+        )
+        with pytest.raises(AnalyticsValidationError) as exc:
+            analytics_svc.analyze(_req("amplification", "defense_carbon_per_workload"))
+        assert "workload units" in str(exc.value)
+
+    def test_derived_metric_is_not_persisted_as_column(
+        self, analytics_svc, db_session
+    ):
+        _amp_row(db_session, amplification_carbon_kg=0.5, attack_workload=500.0)
+        analytics_svc.analyze(_req("amplification", "defense_carbon_per_workload"))
+        row = db_session.query(DefenseAmplificationResult).first()
+        assert not hasattr(row, "defense_carbon_per_workload")
+
+    def test_derived_metric_limitation_documented(
+        self, analytics_svc, db_session
+    ):
+        _amp_row(db_session, amplification_carbon_kg=0.5, attack_workload=500.0)
+        response = analytics_svc.analyze(
+            _req("amplification", "defense_carbon_per_workload")
+        )
+        assert any(
+            "Carbon per workload is a derived ratio" in item
+            for item in response.limitations
+        )
+        assert any("not from grid telemetry" in item for item in response.limitations)

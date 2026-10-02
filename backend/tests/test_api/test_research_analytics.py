@@ -78,6 +78,30 @@ class TestComputeEndpoint:
         assert data["energy_provider"] == "estimated"
         assert any("ESTIMATED" in item for item in data["limitations"])
 
+    def test_carbon_per_workload_metric_accepted(self, client, db):
+        _seed_amplification(client, db, trials=3)
+        response = client.post(
+            "/api/v1/research/analytics",
+            json=_body(metric="defense_carbon_per_workload"),
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["metric"] == "defense_carbon_per_workload"
+        assert data["metric_category"] == "ratio"
+        assert data["n"] == 3
+        assert data["statistics"]["count"] == 3
+        assert data["statistics"]["mean"] > 0
+        assert any("derived ratio" in item for item in data["limitations"])
+
+    def test_carbon_per_workload_unknown_for_other_sources(self, client, db):
+        _seed_amplification(client, db, trials=2)
+        response = client.post(
+            "/api/v1/research/analytics",
+            json={"source": "marginal", "metric": "defense_carbon_per_workload"},
+        )
+        assert response.status_code == 400
+        assert "Invalid metric" in response.json()["detail"]
+
     def test_filtering(self, client, db):
         _seed_amplification(client, db, trials=2, attack="ddos")
         _seed_amplification(client, db, trials=3, attack="port_scan")

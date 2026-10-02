@@ -6,6 +6,7 @@ import type {
   ExperimentSummary,
   InteractionEffectListResponse,
   MarginalEnergyListResponse,
+  OptimizerComparison,
   ResearchAnalyticsListResponse,
   ResearchAnalyticsRequest,
   ResearchAnalyticsResult,
@@ -59,4 +60,7 @@ export const researchApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+
+  // Read-only view of the existing optimizer service (not experiment data).
+  getOptimizerComparison: () => request<OptimizerComparison>('/optimizer/comparison'),
 }

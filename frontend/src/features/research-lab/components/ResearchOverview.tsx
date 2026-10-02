@@ -108,6 +108,11 @@ export default function ResearchOverview({ data }: { data: ResearchLabData }) {
               hardware measurements. Attack workloads come from safe synthetic simulation; no real
               attacks are executed.
             </p>
+            <p className="text-xs text-warning leading-relaxed mt-2">
+              Every carbon figure on this page is <strong>calculated</strong> as energy × carbon
+              intensity ÷ 1000. Carbon intensity is a configured value (default 475 gCO₂/kWh), not
+              live grid telemetry, so carbon is never presented as a measurement.
+            </p>
           </div>
 
           {failedSources.length > 0 && (

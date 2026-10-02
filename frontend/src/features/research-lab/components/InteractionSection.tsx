@@ -24,6 +24,10 @@ import {
   StatTile,
 } from './ResearchBits'
 import {
+  CARBON_INTENSITY_NOTE,
+  carbonBasisLabel,
+  carbonPerWorkloadReason,
+  formatCarbonPerWorkload,
   formatInteger,
   formatJoules,
   formatKilograms,
@@ -261,10 +265,25 @@ export default function InteractionSection({ items, error }: Props) {
               <Field label="Power AB" value={formatWatts(selected.power_ab)} />
               <Field label="Interaction Power" value={formatWatts(selected.interaction_power)} />
               <Field label="Interaction Carbon ΔC" value={formatKilograms(selected.interaction_carbon_kg)} />
+              <Field
+                label="Interaction Carbon per Workload"
+                value={formatCarbonPerWorkload(selected.interaction_carbon_per_workload)}
+              />
+              <Field
+                label="Carbon Basis"
+                value={<span className="text-xs">{carbonBasisLabel(selected.carbon_basis)}</span>}
+              />
               <Field label="Recorded" value={formatDateTime(selected.created_at)} />
               <Field label="Result ID" value={`#${selected.id} (experiment #${selected.experiment_id})`} />
               <Field label="Carbon Intensity" value={formatScalar(selected.carbon_intensity, 1, ' gCO₂/kWh')} />
             </FieldGrid>
+            {carbonPerWorkloadReason(selected.interaction_carbon_per_workload) && (
+              <p className="text-[11px] text-warning mt-2">
+                Carbon per workload unavailable:{' '}
+                {carbonPerWorkloadReason(selected.interaction_carbon_per_workload)}
+              </p>
+            )}
+            <p className="text-[11px] text-muted mt-2">{CARBON_INTENSITY_NOTE}</p>
           </div>
         </CardContent>
       </Card>

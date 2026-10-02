@@ -60,6 +60,16 @@ gross_CO2_kg = energy_kWh × carbon_intensity_g_per_kWh / 1000
 
 Default carbon intensity: 475 gCO2/kWh (configurable per experiment).
 
+Phase 10 adds a derived, non-persisted metric and a provenance label to every Phase 5 result:
+
+```
+marginal_carbon_per_workload = marginal_carbon_kg / workload_value   [kg/<workload_unit>]
+carbon_basis = calculated_from_estimated_energy | calculated_from_measured_energy |
+               calculated_from_simulated_energy | calculated_from_unknown_energy_basis
+```
+
+Carbon intensity is a configured value, not live grid telemetry, so carbon is described as *calculated from* its energy basis and never as a measurement.
+
 ### Measurement Modes
 
 Every result preserves its measurement mode:
@@ -288,6 +298,10 @@ I_C = C_AB - C_A - C_B + C_0
 
 Default carbon intensity: 475 gCO2/kWh (configurable per calculation).
 
+Phase 10 adds the derived `interaction_carbon_per_workload = interaction_carbon_kg / workload_value`
+(unit `kg/<workload_unit>`) and a `carbon_basis` label derived from the result's measurement mode.
+Both are computed at read time; no new columns or tables are introduced.
+
 ### Security Effectiveness
 
 Where available, each result exposes security-effectiveness for all four configurations:
@@ -412,6 +426,12 @@ gross_CO2_kg = energy_kWh × carbon_intensity_g_per_kWh / 1000
 
 Carbon is computed for both configurations with `calculate_carbon(..., renewable_percentage=0)` (gross CO2 only), and the amplification carbon is the difference. Default carbon intensity: 475 gCO2/kWh (configurable per calculation).
 
+Phase 10 adds the derived `defense_carbon_per_workload = amplification_carbon_kg / attack_workload`
+(unit `kg/<workload_unit>`) plus a `carbon_basis` label. The workload denominator is the same attack
+workload used by DEA, so the carbon and energy per-workload ratios stay dimensionally consistent.
+Workload values that are missing, zero, negative, or unit-less return an explicit
+`status = "unavailable"` with a reason instead of a fabricated ratio.
+
 ### Reproducibility
 
 The calculation is a pure deterministic function of the two energy values, workload, duration, and carbon intensity. Repeated computations over identical inputs produce identical outputs. The estimation provider is deterministic and linear in control count; no randomness is used in the energy path.
@@ -503,6 +523,8 @@ Each metric is classified:
 - **level** — absolute quantities (e.g. `energy_attack_only`, `duration_seconds`). Descriptive only; a hypothesis test on a level metric is rejected with HTTP 400 because it is not a paired comparison.
 
 Only metrics that exist on the selected source's table are accepted; a metric from the wrong source, an unknown source, or an unknown metric is rejected with HTTP 400.
+
+Phase 10 adds three derived **ratio** metrics that are computed at read time from stored carbon and workload fields rather than read from a column: `marginal_carbon_per_workload`, `interaction_carbon_per_workload`, and `defense_carbon_per_workload`. They are `workload_dependent`, so mixed workload units in one analysis are rejected with HTTP 400, and any row whose carbon or workload input is invalid is rejected with HTTP 400 naming the observation and the reason.
 
 ### Grouped Analysis
 
@@ -637,7 +659,75 @@ Any change to the analysis semantics will increment this version.
 5. **Single host**: all underlying measurements assume one computing environment
 6. **Observation cap**: analyses read at most 10 000 persisted results per request
 7. **No multiple-comparison correction**: grouped analyses report per-group p-values without family-wise correction
-8. **No frontend yet**: Phase 8 exposes the API only; the research analytics dashboard arrives in a later phase
+8. **Frontend**: the Research Lab (Phase 9) exposes these analyses; Phase 10 adds the carbon metrics described above
+
+---
+
+## Carbon Research Metrics (Phase 10)
+
+Phase 10 makes carbon a consistent research metric across the research engine. It reuses the
+existing carbon code; it does not introduce a second formula, table, or endpoint.
+
+### Single Formula
+
+```
+energy_kWh = energy_joules / 3,600,000          # JOULES_PER_KWH lives in the carbon engine
+gross_CO2_kg = energy_kWh × carbon_intensity_g_per_kWh / 1000
+```
+
+`carbon_intensity` is a configured value (`DEFAULT_CARBON_INTENSITY = 475 gCO2/kWh`, overridable per
+experiment or per calculation). It is **not** live grid telemetry, so carbon is never presented as a
+measurement.
+
+### Carbon per Attack Workload
+
+```
+carbon_per_workload = carbon_kg / workload_value          [kg/<workload_unit>]
+```
+
+| Source | Derived field | Denominator |
+|---|---|---|
+| `marginal` (Phase 5) | `marginal_carbon_per_workload` | `workload_value` |
+| `interaction` (Phase 6) | `interaction_carbon_per_workload` | `workload_value` |
+| `amplification` (Phase 7) | `defense_carbon_per_workload` | `attack_workload` |
+
+Rules:
+
+- The workload unit is preserved verbatim (`kg/requests_per_second`, `kg/login_attempts`, …).
+- Missing, zero, negative, or unit-less workloads return `status = "unavailable"` with a reason;
+  a number is never fabricated for an incompatible workload.
+- Negative carbon (a carbon reduction) keeps its sign; it is never clamped to zero.
+- Values are derived at read time from persisted carbon and workload fields — no schema change,
+  no duplicate carbon storage.
+
+### Carbon Basis
+
+Every Phase 5–7 response carries `carbon_basis`, which names what the carbon figure was calculated
+from: `calculated_from_measured_energy`, `calculated_from_estimated_energy`,
+`calculated_from_simulated_energy`, or `calculated_from_unknown_energy_basis`. Carbon is always a
+calculation; the basis only changes which energy basis it was calculated from.
+
+### Analytics Metrics
+
+`marginal_carbon_per_workload`, `interaction_carbon_per_workload`, and `defense_carbon_per_workload`
+are also available as `ratio` analytics metrics (testable, `workload_dependent`) through
+`POST /api/v1/research/analytics`.
+
+### Optimized Carbon Context
+
+The Research Lab additionally reads the existing optimizer's `GET /optimizer/comparison` to show
+optimized carbon, carbon saved, and reduction percentage next to the research metrics. This is a
+read-only reuse of an existing endpoint; it is simulated scheduling data, not research experiment
+data, and security-critical workloads are never delayed for carbon savings.
+
+### Limitations
+
+1. **Derived, not measured**: all carbon values are energy × configured intensity; none is a direct
+   emissions measurement
+2. **Configured intensity**: intensity is a configured default, not live grid telemetry
+3. **Simulated attacks**: workloads are safe synthetic simulations
+4. **No optimality claims**: carbon comparisons are descriptive; they do not establish optimality,
+   causality, or universal generalization
 
 ---
 

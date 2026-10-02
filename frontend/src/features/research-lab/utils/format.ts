@@ -1,4 +1,33 @@
 import { formatCO2, formatNumber } from '@/shared/utils/formatters'
+import type { CarbonPerWorkload } from '../types/research'
+
+export function formatCarbonPerWorkload(
+  value: CarbonPerWorkload | null | undefined,
+): string {
+  if (!value || value.status !== 'available' || value.value_kg === null || value.value_kg === undefined) {
+    return 'Not available'
+  }
+  const [amount, massUnit] = formatCO2(value.value_kg).split(' ')
+  const workloadSuffix = value.unit?.startsWith('kg/')
+    ? value.unit.slice(3)
+    : value.unit
+  return workloadSuffix ? `${amount} ${massUnit}/${workloadSuffix}` : `${amount} ${massUnit}`
+}
+
+export function carbonPerWorkloadReason(
+  value: CarbonPerWorkload | null | undefined,
+): string | null {
+  if (!value || value.status === 'available') return null
+  return value.reason ?? 'Not available'
+}
+
+export function carbonBasisLabel(basis: string | null | undefined): string {
+  if (!basis) return 'unknown energy basis'
+  return basis.replace(/_/g, ' ')
+}
+
+export const CARBON_INTENSITY_NOTE =
+  'Carbon = energy (kWh) × carbon intensity (gCO₂/kWh) ÷ 1000. Carbon intensity is a configured value (default 475 gCO₂/kWh), not live grid telemetry, and carbon is calculated — never measured.'
 
 export function formatJoules(value: number | null | undefined, digits = 2): string {
   if (value === null || value === undefined || Number.isNaN(value)) return '—'

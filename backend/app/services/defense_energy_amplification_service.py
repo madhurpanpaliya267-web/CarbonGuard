@@ -46,7 +46,7 @@ from app.repositories.research_repo import (
     EnergyMeasurementRepository,
     DefenseAmplificationResultRepository,
 )
-from app.engines.carbon.carbon_calculator import calculate_carbon
+from app.engines.carbon.carbon_calculator import JOULES_PER_KWH, calculate_carbon
 from app.engines.security.security_controls import (
     validate_control_id,
     SecurityControlError,
@@ -61,7 +61,6 @@ from app.schemas.research import (
 )
 
 FORMULA_VERSION = "defense_energy_amplification_v1"
-JOULES_PER_KWH = 3_600_000
 
 
 class DefenseEnergyAmplificationError(Exception):

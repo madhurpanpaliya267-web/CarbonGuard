@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from sqlalchemy.orm import Session
 
+from app.engines.carbon.carbon_calculator import calculate_carbon_per_workload
 from app.engines.analytics.statistics import (
     POPULATION_STD_CONVENTION,
     SAMPLE_STD_CONVENTION,
@@ -81,6 +82,11 @@ class _MetricSpec:
     category: str
     per_workload: bool = False
     workload_dependent: bool = False
+    # Derived carbon-per-workload metrics are computed at read time instead of
+    # being persisted: value = carbon_field / workload_field (same conversion
+    # rules as app.engines.carbon.carbon_calculator.calculate_carbon_per_workload).
+    carbon_field: Optional[str] = None
+    workload_field: Optional[str] = None
 
 
 def _difference() -> _MetricSpec:
@@ -108,6 +114,12 @@ _METRICS: Dict[str, Dict[str, _MetricSpec]] = {
         "workload_value": _MetricSpec(CATEGORY_LEVEL, workload_dependent=True),
         "duration_seconds": _level(),
         "carbon_intensity": _level(),
+        "marginal_carbon_per_workload": _MetricSpec(
+            CATEGORY_RATIO,
+            workload_dependent=True,
+            carbon_field="marginal_carbon_kg",
+            workload_field="workload_value",
+        ),
     },
     "interaction": {
         "interaction_effect": _difference(),
@@ -129,6 +141,12 @@ _METRICS: Dict[str, Dict[str, _MetricSpec]] = {
         "workload_value": _MetricSpec(CATEGORY_LEVEL, workload_dependent=True),
         "duration_seconds": _level(),
         "carbon_intensity": _level(),
+        "interaction_carbon_per_workload": _MetricSpec(
+            CATEGORY_RATIO,
+            workload_dependent=True,
+            carbon_field="interaction_carbon_kg",
+            workload_field="workload_value",
+        ),
     },
     "amplification": {
         "additional_defense_energy": _difference(),
@@ -146,6 +164,12 @@ _METRICS: Dict[str, Dict[str, _MetricSpec]] = {
         "attack_workload": _MetricSpec(CATEGORY_LEVEL, workload_dependent=True),
         "duration_seconds": _level(),
         "carbon_intensity": _level(),
+        "defense_carbon_per_workload": _MetricSpec(
+            CATEGORY_RATIO,
+            workload_dependent=True,
+            carbon_field="amplification_carbon_kg",
+            workload_field="attack_workload",
+        ),
     },
 }
 
@@ -254,6 +278,7 @@ class ResearchAnalyticsService:
     ) -> ResearchAnalyticsResponse:
         config = self._validate_request(request)
         analysis_id = self._analysis_id(config)
+        spec = _METRICS[request.source][request.metric]
         rows, warnings = self._fetch_rows(request)
         if not rows:
             raise AnalyticsInsufficientDataError(
@@ -261,9 +286,8 @@ class ResearchAnalyticsService:
                 "requested source, metric, and filters"
             )
 
-        values = self._extract_values(request, rows)
+        values = self._extract_values(request, rows, spec)
         self._validate_duplicates(request, rows)
-        spec = _METRICS[request.source][request.metric]
         self._validate_comparability(request, rows, spec)
         paired_ok = self._validate_pairing_if_requested(request, rows, spec)
 
@@ -356,6 +380,13 @@ class ResearchAnalyticsService:
                 0,
                 "Energy values are MEASURED via the configured provider; see "
                 "energy_provider for provenance.",
+            )
+        if spec.carbon_field is not None:
+            limitations.append(
+                "Carbon per workload is a derived ratio: calculated carbon "
+                "(energy x carbon intensity) divided by the recorded attack "
+                "workload; carbon intensity comes from the configured default, "
+                "not from grid telemetry, and is never a direct measurement."
             )
 
         response = ResearchAnalyticsResponse(
@@ -539,10 +570,29 @@ class ResearchAnalyticsService:
         return kept, warnings
 
     def _extract_values(
-        self, request: ResearchAnalyticsRequest, rows: Sequence[Any]
+        self,
+        request: ResearchAnalyticsRequest,
+        rows: Sequence[Any],
+        spec: _MetricSpec,
     ) -> List[float]:
         values: List[float] = []
         for row in rows:
+            if spec.carbon_field is not None:
+                derived = calculate_carbon_per_workload(
+                    getattr(row, spec.carbon_field, None),
+                    getattr(row, spec.workload_field, None)
+                    if spec.workload_field
+                    else None,
+                    getattr(row, "workload_unit", None),
+                )
+                if derived["status"] != "available":
+                    raise AnalyticsValidationError(
+                        f"Invalid carbon-per-workload input: observation "
+                        f"{row.id} ({derived['reason']}); metric "
+                        f"'{request.metric}' cannot be computed for this row"
+                    )
+                values.append(float(derived["value_kg"]))
+                continue
             raw = getattr(row, request.metric, None)
             if raw is None:
                 raise AnalyticsValidationError(

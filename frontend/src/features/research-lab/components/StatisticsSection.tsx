@@ -34,6 +34,7 @@ export const METRICS_BY_SOURCE: Record<string, string[]> = {
     'workload_value',
     'duration_seconds',
     'carbon_intensity',
+    'marginal_carbon_per_workload',
   ],
   interaction: [
     'interaction_effect',
@@ -55,6 +56,7 @@ export const METRICS_BY_SOURCE: Record<string, string[]> = {
     'workload_value',
     'duration_seconds',
     'carbon_intensity',
+    'interaction_carbon_per_workload',
   ],
   amplification: [
     'additional_defense_energy',
@@ -70,6 +72,7 @@ export const METRICS_BY_SOURCE: Record<string, string[]> = {
     'attack_workload',
     'duration_seconds',
     'carbon_intensity',
+    'defense_carbon_per_workload',
   ],
 }
 
@@ -222,10 +225,13 @@ export default function StatisticsSection() {
   const testableMetric = useMemo(() => {
     const differenceMetrics = new Set([
       ...(METRICS_BY_SOURCE.marginal ?? []).slice(0, 3),
+      'marginal_carbon_per_workload',
       ...(METRICS_BY_SOURCE.interaction ?? []).slice(0, 3),
       'interaction_index',
+      'interaction_carbon_per_workload',
       ...(METRICS_BY_SOURCE.amplification ?? []).slice(0, 3),
       'defense_energy_amplification',
+      'defense_carbon_per_workload',
     ])
     return differenceMetrics.has(metric)
   }, [metric])

@@ -4,6 +4,7 @@ import { Card, CardTitle, CardContent } from '@/shared/ui/Card'
 import Badge from '@/shared/ui/Badge'
 import { SectionEmpty, SectionError } from './ResearchBits'
 import ResearchOverview from './ResearchOverview'
+import CarbonContextSection from './CarbonContextSection'
 import MarginalEnergySection from './MarginalEnergySection'
 import InteractionSection from './InteractionSection'
 import AmplificationSection from './AmplificationSection'
@@ -112,7 +113,7 @@ export default function ResearchLabPage() {
     <div className="space-y-6" data-testid="research-lab-page">
       <PageHeader
         title="Research Lab"
-        subtitle="Phase 5–8 research analytics: marginal energy, control interaction, defense amplification, and statistics"
+        subtitle="Phase 5–8 research analytics with Phase 10 carbon metrics: marginal energy, control interaction, defense amplification, carbon per workload, and statistics"
         badge={
           <Badge variant="warning" size="sm">
             <span className="inline-block w-1.5 h-1.5 bg-warning rounded-full animate-pulse mr-1" />
@@ -127,6 +128,10 @@ export default function ResearchLabPage() {
       />
 
       <ResearchOverview data={data} />
+
+      <section aria-label="Carbon context">
+        <CarbonContextSection />
+      </section>
 
       <section aria-label="Marginal energy attribution">
         <MarginalEnergySection

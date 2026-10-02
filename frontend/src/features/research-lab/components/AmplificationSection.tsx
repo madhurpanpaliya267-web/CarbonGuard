@@ -22,6 +22,10 @@ import {
   StatTile,
 } from './ResearchBits'
 import {
+  CARBON_INTENSITY_NOTE,
+  carbonBasisLabel,
+  carbonPerWorkloadReason,
+  formatCarbonPerWorkload,
   formatInteger,
   formatJoules,
   formatKilograms,
@@ -141,7 +145,22 @@ export default function AmplificationSection({ items, error }: Props) {
                 <Field label="Baseline Carbon" value={formatKilograms(selected.carbon_baseline_kg)} />
                 <Field label="Defense Carbon" value={formatKilograms(selected.carbon_defense_kg)} />
                 <Field label="Carbon Difference" value={formatKilograms(selected.amplification_carbon_kg)} />
+                <Field
+                  label="Defense Carbon per Workload"
+                  value={formatCarbonPerWorkload(selected.defense_carbon_per_workload)}
+                />
+                <Field
+                  label="Carbon Basis"
+                  value={<span className="text-xs">{carbonBasisLabel(selected.carbon_basis)}</span>}
+                />
               </FieldGrid>
+              {carbonPerWorkloadReason(selected.defense_carbon_per_workload) && (
+                <p className="text-[11px] text-warning mt-2">
+                  Carbon per workload unavailable:{' '}
+                  {carbonPerWorkloadReason(selected.defense_carbon_per_workload)}
+                </p>
+              )}
+              <p className="text-[11px] text-muted mt-2">{CARBON_INTENSITY_NOTE}</p>
             </div>
           </div>
 

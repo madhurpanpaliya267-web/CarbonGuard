@@ -47,7 +47,7 @@ from app.repositories.research_repo import (
     SecurityEffectivenessRepository,
     InteractionResultRepository,
 )
-from app.engines.carbon.carbon_calculator import calculate_carbon
+from app.engines.carbon.carbon_calculator import JOULES_PER_KWH, calculate_carbon
 from app.engines.security.security_controls import (
     validate_control_id,
     SecurityControlError,
@@ -63,7 +63,6 @@ from app.schemas.research import (
 )
 
 FORMULA_VERSION = "interaction_effect_v1"
-JOULES_PER_KWH = 3_600_000
 ADDITIVE_TOLERANCE = 1e-9
 
 RUN_LABELS = ("baseline", "control_a", "control_b", "combined")

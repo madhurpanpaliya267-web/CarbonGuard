@@ -83,6 +83,13 @@ class TestComputeEndpoint:
         assert response.status_code == 201
         row = response.json()["results"][0]
         assert row["carbon_intensity"] == 300
+        assert row["carbon_basis"] == "calculated_from_estimated_energy"
+        cpw = row["interaction_carbon_per_workload"]
+        assert cpw["status"] == "available"
+        assert cpw["unit"] == f"kg/{row['workload_unit']}"
+        assert cpw["value_kg"] == pytest.approx(
+            row["interaction_carbon_kg"] / row["workload_value"]
+        )
 
     def test_compute_exposes_security_effectiveness(self, client):
         quartet = _quartet_ids(client)

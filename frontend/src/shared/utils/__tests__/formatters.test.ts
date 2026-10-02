@@ -39,12 +39,16 @@ describe('formatEnergy', () => {
     expect(formatEnergy(5.5)).toBe('5.50 kWh')
   })
 
-  it('formats medium energy values in mWh', () => {
-    expect(formatEnergy(0.5)).toBe('500.0 mWh')
+  it('formats medium energy values in Wh', () => {
+    expect(formatEnergy(0.5)).toBe('500.0 Wh')
   })
 
-  it('formats small energy values in Wh', () => {
-    expect(formatEnergy(0.0005)).toBe('500.0 Wh')
+  it('formats small energy values in mWh', () => {
+    expect(formatEnergy(0.0005)).toBe('500.0 mWh')
+  })
+
+  it('formats tiny energy values in µWh', () => {
+    expect(formatEnergy(0.0000005)).toBe('500.0 µWh')
   })
 })
 
@@ -53,12 +57,24 @@ describe('formatCO2', () => {
     expect(formatCO2(2.5)).toBe('2.50 kg')
   })
 
-  it('formats medium CO2 values in mg', () => {
-    expect(formatCO2(0.5)).toBe('500.0 mg')
+  it('formats medium CO2 values in g', () => {
+    expect(formatCO2(0.5)).toBe('500.0 g')
   })
 
-  it('formats small CO2 values in g', () => {
-    expect(formatCO2(0.0005)).toBe('500.0 g')
+  it('formats small CO2 values in mg', () => {
+    expect(formatCO2(0.0005)).toBe('500.0 mg')
+  })
+
+  it('formats tiny CO2 values in µg', () => {
+    expect(formatCO2(0.0000005)).toBe('500.0 µg')
+  })
+
+  it('formats zero as zero kilograms', () => {
+    expect(formatCO2(0)).toBe('0.00 kg')
+  })
+
+  it('keeps the sign of negative carbon differences', () => {
+    expect(formatCO2(-0.5)).toBe('-500.0 g')
   })
 })
 

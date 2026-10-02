@@ -30,10 +30,9 @@ from app.repositories.research_repo import (
     SecurityEffectivenessRepository,
     EnergyAttributionRepository,
 )
-from app.engines.carbon.carbon_calculator import calculate_carbon
+from app.engines.carbon.carbon_calculator import JOULES_PER_KWH, calculate_carbon
 
 FORMULA_VERSION = "marginal_energy_v1"
-JOULES_PER_KWH = 3_600_000
 
 
 class MarginalEnergyError(Exception):

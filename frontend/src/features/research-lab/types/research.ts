@@ -1,3 +1,20 @@
+export interface CarbonPerWorkload {
+  value_kg: number | null
+  unit: string | null
+  status: string
+  reason: string | null
+}
+
+export interface OptimizerComparison {
+  before?: { energy_kwh?: number | null; co2_kg?: number | null }
+  after?: { energy_kwh?: number | null; co2_kg?: number | null }
+  comparison?: {
+    energy_saved?: number | null
+    co2_saved?: number | null
+    reduction_pct?: number | null
+  }
+}
+
 export interface Experiment {
   id: number
   experiment_uuid: string
@@ -134,6 +151,8 @@ export interface MarginalEnergyResult {
   security_carbon_kg: number | null
   marginal_carbon_kg: number | null
   carbon_intensity: number | null
+  marginal_carbon_per_workload: CarbonPerWorkload
+  carbon_basis: string
   measurement_mode: string
   formula_version: string
   created_at: string
@@ -195,6 +214,8 @@ export interface InteractionResult {
   carbon_intensity: number | null
   energy_provider: string | null
   measurement_mode: string | null
+  interaction_carbon_per_workload: CarbonPerWorkload
+  carbon_basis: string
   formula_version: string
   created_at: string
   security_effectiveness: SecurityEffectivenessBundle | null
@@ -242,6 +263,8 @@ export interface AmplificationResult {
   software_version: string | null
   configuration_version: string | null
   num_paired_trials: number
+  defense_carbon_per_workload: CarbonPerWorkload
+  carbon_basis: string
   statistics: AmplificationStatistics | null
   formula_version: string
   created_at: string
