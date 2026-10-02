@@ -124,6 +124,43 @@ class TestMarginalEnergyAPI:
         response = client.get("/api/v1/research/marginal-energy/999999")
         assert response.status_code == 404
 
+    def test_list_marginal_energy_filtered_by_experiment_id(self, client):
+        _, base_runs = _create_and_execute(client, "ddos", "low", [])
+        _, sec_runs = _create_and_execute(client, "ddos", "low", ["firewall"])
+
+        created = client.post("/api/v1/research/marginal-energy", json={
+            "baseline_run_id": base_runs[0]["id"],
+            "security_run_id": sec_runs[0]["id"],
+        })
+        assert created.status_code == 201
+        experiment_id = created.json()["experiment_id"]
+
+        response = client.get(
+            "/api/v1/research/marginal-energy",
+            params={"experiment_id": experiment_id},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] >= 1
+        assert all(
+            item["experiment_id"] == experiment_id for item in data["items"]
+        )
+
+    def test_list_marginal_energy_unknown_experiment_id_is_empty(self, client):
+        response = client.get(
+            "/api/v1/research/marginal-energy",
+            params={"experiment_id": 999999},
+        )
+        assert response.status_code == 200
+        assert response.json()["total"] == 0
+
+    def test_list_marginal_energy_invalid_experiment_id_rejected(self, client):
+        response = client.get(
+            "/api/v1/research/marginal-energy",
+            params={"experiment_id": "not-an-int"},
+        )
+        assert response.status_code == 422
+
     def test_paired_statistics(self, client):
         _, base_runs = _create_and_execute(client, "ddos", "low", [])
         _, sec_runs = _create_and_execute(client, "ddos", "low", ["firewall"])

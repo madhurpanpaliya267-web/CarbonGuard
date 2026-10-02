@@ -288,6 +288,7 @@ class MarginalEnergyService:
 
     def list_attributions(
         self,
+        experiment_id: Optional[int] = None,
         attack_type: Optional[str] = None,
         attack_intensity: Optional[str] = None,
         measurement_mode: Optional[str] = None,
@@ -295,6 +296,7 @@ class MarginalEnergyService:
         limit: int = 50,
     ) -> list[EnergyAttribution]:
         return self.attribution_repo.filter_attributions(
+            experiment_id=experiment_id,
             attack_type=attack_type,
             attack_intensity=attack_intensity,
             measurement_mode=measurement_mode,

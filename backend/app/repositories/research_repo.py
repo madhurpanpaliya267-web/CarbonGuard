@@ -176,6 +176,7 @@ class InteractionResultRepository(BaseRepository[InteractionResult]):
 
     def filter_interactions(
         self,
+        experiment_id: Optional[int] = None,
         attack_type: Optional[str] = None,
         attack_intensity: Optional[str] = None,
         measurement_mode: Optional[str] = None,
@@ -185,6 +186,8 @@ class InteractionResultRepository(BaseRepository[InteractionResult]):
         limit: int = 50,
     ) -> List[InteractionResult]:
         query = select(InteractionResult)
+        if experiment_id is not None:
+            query = query.where(InteractionResult.experiment_id == experiment_id)
         if attack_type:
             query = query.where(InteractionResult.attack_type == attack_type)
         if attack_intensity:
@@ -224,6 +227,7 @@ class DefenseAmplificationResultRepository(BaseRepository[DefenseAmplificationRe
 
     def filter_amplification(
         self,
+        experiment_id: Optional[int] = None,
         attack_type: Optional[str] = None,
         attack_intensity: Optional[str] = None,
         measurement_mode: Optional[str] = None,
@@ -232,6 +236,8 @@ class DefenseAmplificationResultRepository(BaseRepository[DefenseAmplificationRe
         limit: int = 50,
     ) -> List[DefenseAmplificationResult]:
         query = select(DefenseAmplificationResult)
+        if experiment_id is not None:
+            query = query.where(DefenseAmplificationResult.experiment_id == experiment_id)
         if attack_type:
             query = query.where(DefenseAmplificationResult.attack_type == attack_type)
         if attack_intensity:
@@ -269,6 +275,7 @@ class EnergyAttributionRepository(BaseRepository[EnergyAttribution]):
 
     def filter_attributions(
         self,
+        experiment_id: Optional[int] = None,
         attack_type: Optional[str] = None,
         attack_intensity: Optional[str] = None,
         measurement_mode: Optional[str] = None,
@@ -276,6 +283,8 @@ class EnergyAttributionRepository(BaseRepository[EnergyAttribution]):
         limit: int = 50,
     ) -> List[EnergyAttribution]:
         query = select(EnergyAttribution)
+        if experiment_id is not None:
+            query = query.where(EnergyAttribution.experiment_id == experiment_id)
         if attack_type:
             query = query.where(EnergyAttribution.attack_type == attack_type)
         if attack_intensity:

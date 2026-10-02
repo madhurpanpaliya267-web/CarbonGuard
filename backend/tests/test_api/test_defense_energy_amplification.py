@@ -240,6 +240,32 @@ class TestGetEndpoints:
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
+    def test_list_filtered_by_experiment_id(self, client):
+        pair = _pair_ids(client)
+        created = client.post(
+            "/api/v1/research/defense-energy-amplification",
+            json=_compute_body(pair),
+        ).json()
+        experiment_id = created["results"][0]["experiment_id"]
+
+        response = client.get(
+            "/api/v1/research/defense-energy-amplification",
+            params={"experiment_id": experiment_id},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] >= 1
+        assert all(
+            item["experiment_id"] == experiment_id for item in data["items"]
+        )
+
+        unknown = client.get(
+            "/api/v1/research/defense-energy-amplification",
+            params={"experiment_id": 999999},
+        )
+        assert unknown.status_code == 200
+        assert unknown.json()["total"] == 0
+
     def test_persisted_result_retrievable_after_create(self, client):
         pair = _pair_ids(client)
         created_row = client.post(

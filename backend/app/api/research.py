@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+import csv
+import io
+
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.research_service import (
@@ -22,9 +25,15 @@ from app.services.research_analytics_service import (
     AnalyticsValidationError,
     AnalyticsInsufficientDataError,
 )
+from app.services.research_summary_service import ResearchSummaryService
+from app.services.research_export_service import (
+    ResearchExportError,
+    ResearchExportService,
+)
 from app.schemas.research import (
     ExperimentCreateRequest,
     ExperimentResponse,
+    ExperimentRunListResponse,
     ExperimentRunResponse,
     ExperimentSummaryResponse,
     ExperimentStatusResponse,
@@ -47,6 +56,9 @@ from app.schemas.research import (
     ResearchAnalyticsRequest,
     ResearchAnalyticsResponse,
     ResearchAnalyticsListResponse,
+    ResearchExportResponse,
+    ResearchMetricsResponse,
+    ResearchSummaryResponse,
 )
 
 router = APIRouter()
@@ -58,7 +70,7 @@ def create_experiment(request: ExperimentCreateRequest, db: Session = Depends(ge
     try:
         config = request.model_dump()
         experiment = service.create_experiment(config)
-        return experiment
+        return ExperimentResponse.model_validate(experiment)
     except ExperimentError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -68,7 +80,7 @@ def execute_experiment(experiment_uuid: str, db: Session = Depends(get_db)):
     service = ResearchExperimentService(db)
     try:
         experiment = service.execute_experiment(experiment_uuid)
-        return experiment
+        return ExperimentResponse.model_validate(experiment)
     except ExperimentError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -100,7 +112,7 @@ def get_experiment(experiment_uuid: str, db: Session = Depends(get_db)):
     experiment = service.get_experiment(experiment_uuid)
     if not experiment:
         raise HTTPException(status_code=404, detail=f"Experiment not found: {experiment_uuid}")
-    return experiment
+    return ExperimentResponse.model_validate(experiment)
 
 
 @router.get("/experiments/{experiment_uuid}/status", response_model=ExperimentStatusResponse)
@@ -112,32 +124,41 @@ def get_experiment_status(experiment_uuid: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.get("/experiments/{experiment_uuid}/runs")
+@router.get("/experiments/{experiment_uuid}/runs", response_model=ExperimentRunListResponse)
 def get_experiment_runs(experiment_uuid: str, db: Session = Depends(get_db)):
     service = ResearchExperimentService(db)
     try:
         runs = service.get_experiment_runs(experiment_uuid)
-        return {
-            "total": len(runs),
-            "items": [ExperimentRunResponse.model_validate(r) for r in runs],
-        }
     except ExperimentError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    return ExperimentRunListResponse(
+        total=len(runs),
+        items=[ExperimentRunResponse.model_validate(r) for r in runs],
+    )
 
 
-@router.get("/experiments/{experiment_uuid}/summary")
+@router.get(
+    "/experiments/{experiment_uuid}/summary",
+    response_model=ExperimentSummaryResponse,
+)
 def get_experiment_summary(experiment_uuid: str, db: Session = Depends(get_db)):
     service = ResearchExperimentService(db)
     try:
         summary = service.get_experiment_summary(experiment_uuid)
-        return {
-            "experiment": ExperimentResponse.model_validate(summary["experiment"]),
-            "runs": [ExperimentRunResponse.model_validate(r) for r in summary["runs"]],
-            "measurements": [EnergyMeasurementResponse.model_validate(m) for m in summary["measurements"]],
-            "security_effects": [SecurityEffectivenessResponse.model_validate(s) for s in summary["security_effects"]],
-        }
     except ExperimentError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    return ExperimentSummaryResponse(
+        experiment=ExperimentResponse.model_validate(summary["experiment"]),
+        runs=[ExperimentRunResponse.model_validate(r) for r in summary["runs"]],
+        measurements=[
+            EnergyMeasurementResponse.model_validate(m)
+            for m in summary["measurements"]
+        ],
+        security_effects=[
+            SecurityEffectivenessResponse.model_validate(s)
+            for s in summary["security_effects"]
+        ],
+    )
 
 
 @router.get("/attacks")
@@ -169,6 +190,7 @@ def compute_marginal_energy(request: MarginalEnergyComputeRequest, db: Session =
 
 @router.get("/marginal-energy", response_model=MarginalEnergyListResponse)
 def list_marginal_energy(
+    experiment_id: int = None,
     attack_type: str = None,
     attack_intensity: str = None,
     measurement_mode: str = None,
@@ -178,6 +200,7 @@ def list_marginal_energy(
 ):
     service = MarginalEnergyService(db)
     attributions = service.list_attributions(
+        experiment_id=experiment_id,
         attack_type=attack_type,
         attack_intensity=attack_intensity,
         measurement_mode=measurement_mode,
@@ -212,7 +235,10 @@ def compute_paired_statistics(request: PairedStatisticsRequest, db: Session = De
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/experiments/{experiment_uuid}/marginal-energy")
+@router.post(
+    "/experiments/{experiment_uuid}/marginal-energy",
+    response_model=MarginalEnergyListResponse,
+)
 def compute_experiment_marginal_energy(
     experiment_uuid: str,
     carbon_intensity: float = None,
@@ -224,12 +250,12 @@ def compute_experiment_marginal_energy(
             experiment_uuid=experiment_uuid,
             carbon_intensity=carbon_intensity,
         )
-        return {
-            "total": len(attributions),
-            "items": [MarginalEnergyResponse.model_validate(a) for a in attributions],
-        }
     except MarginalEnergyError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    return MarginalEnergyListResponse(
+        total=len(attributions),
+        items=[MarginalEnergyResponse.model_validate(a) for a in attributions],
+    )
 
 
 @router.post(
@@ -259,6 +285,7 @@ def compute_interaction_effects(
 
 @router.get("/interaction-effects", response_model=InteractionEffectListResponse)
 def list_interaction_effects(
+    experiment_id: int = None,
     attack_type: str = None,
     attack_intensity: str = None,
     measurement_mode: str = None,
@@ -270,6 +297,7 @@ def list_interaction_effects(
 ):
     service = InteractionEffectService(db)
     return service.list_interaction_effects(
+        experiment_id=experiment_id,
         attack_type=attack_type,
         attack_intensity=attack_intensity,
         measurement_mode=measurement_mode,
@@ -322,6 +350,7 @@ def compute_defense_energy_amplification(
     response_model=DefenseAmplificationListResponse,
 )
 def list_defense_energy_amplification(
+    experiment_id: int = None,
     attack_type: str = None,
     attack_intensity: str = None,
     measurement_mode: str = None,
@@ -332,6 +361,7 @@ def list_defense_energy_amplification(
 ):
     service = DefenseEnergyAmplificationService(db)
     return service.list_amplification(
+        experiment_id=experiment_id,
         attack_type=attack_type,
         attack_intensity=attack_intensity,
         measurement_mode=measurement_mode,
@@ -402,3 +432,54 @@ def get_research_analytics(analysis_id: str, db: Session = Depends(get_db)):
             detail=f"Analytics result not found: {analysis_id}",
         )
     return response
+
+
+@router.get("/summary", response_model=ResearchSummaryResponse)
+def get_research_summary(db: Session = Depends(get_db)):
+    service = ResearchSummaryService(db)
+    return service.get_summary()
+
+
+@router.get("/metrics", response_model=ResearchMetricsResponse)
+def get_research_metrics(db: Session = Depends(get_db)):
+    service = ResearchSummaryService(db)
+    return service.get_metrics()
+
+
+@router.get("/export/csv")
+def export_research_csv(
+    dataset: str = "marginal_energy",
+    db: Session = Depends(get_db),
+):
+    service = ResearchExportService(db)
+    try:
+        columns, rows = service.export_csv(dataset)
+    except ResearchExportError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=columns, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(rows)
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="carbon_guard_research_{dataset}.csv"'
+            )
+        },
+    )
+
+
+@router.get(
+    "/export/json",
+    response_model=ResearchExportResponse,
+)
+def export_research_json(response: Response, db: Session = Depends(get_db)):
+    service = ResearchExportService(db)
+    payload = service.export_json()
+    response.headers["Content-Disposition"] = (
+        'attachment; filename="carbon_guard_research.json"'
+    )
+    return payload

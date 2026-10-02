@@ -428,6 +428,201 @@ Resets all settings to defaults.
 
 ---
 
+## Research
+
+Research experiment APIs (Phase 11). Base path: `/api/v1/research`.
+
+**Conventions:**
+- Every research response is a Pydantic `response_model` DTO — raw ORM objects are never serialized.
+- Validation errors return `400` (service/domain error) or `404` (missing resource). Schema violations return `422`.
+- `experiment_id` query filters only accept integers; unknown ids return an empty list (`total: 0`), never an error.
+- Measurements are synthetic/simulated for demo use. `measurement_mode` is one of `ESTIMATED`, `MEASURED`, `SIMULATED`, and must be reported as such — never described as a physical power-meter reading unless it is `MEASURED`.
+
+### Experiments
+
+#### GET `/api/v1/research/experiments`
+
+Paginated list of research experiments.
+
+#### POST `/api/v1/research/experiments`
+
+Creates an experiment. Returns `201` with `ExperimentResponse` (e.g. `experiment_uuid`, `name`, `attack_type`, `security_controls`, `status`).
+
+#### GET `/api/v1/research/experiments/{experiment_uuid}`
+
+Returns a single experiment as `ExperimentResponse`.
+
+#### POST `/api/v1/research/experiments/{experiment_uuid}/execute`
+
+Executes the experiment and creates its runs. Returns `200`.
+
+#### GET `/api/v1/research/experiments/{experiment_uuid}/runs`
+
+Returns `ExperimentRunListResponse` (`total`, `items[]` of run DTOs).
+
+#### GET `/api/v1/research/experiments/{experiment_uuid}/status`
+
+Returns execution status for the experiment.
+
+#### GET `/api/v1/research/experiments/{experiment_uuid}/summary`
+
+Returns `ExperimentSummaryResponse` (`experiment`, `runs[]`, `measurements[]`, `security_effects[]`). An experiment without runs returns empty lists — no values are invented.
+
+#### GET `/api/v1/research/experiments/{experiment_uuid}/marginal-energy`
+
+**Query params:** `carbon_intensity` (optional, gCO2/kWh)
+
+Computes marginal energy for every comparable run pair in one experiment. Returns `MarginalEnergyListResponse`.
+
+#### GET `/api/v1/research/attacks` · GET `/api/v1/research/controls`
+
+Reference lists of supported attack types and security controls.
+
+### Marginal Energy
+
+#### POST `/api/v1/research/marginal-energy`
+
+Computes one baseline/security run pair and persists the attribution.
+
+**Request:**
+```json
+{
+  "baseline_run_id": 1,
+  "security_run_id": 2,
+  "carbon_intensity": 420.0
+}
+```
+
+Returns `201` with an `EnergyAttributionResponse` (`marginal_energy_joules`, `marginal_carbon_kg`, `formula_version: "marginal_energy_v1"`, `measurement_mode`, `experiment_id`).
+
+#### POST `/api/v1/research/marginal-energy/statistics`
+
+**Request:**
+```json
+{ "baseline_run_ids": [1, 3], "security_run_ids": [2, 4] }
+```
+
+Returns `PairedStatisticsResponse` with `marginal_energy`, `marginal_power`, and `marginal_carbon` summaries plus `formula_version`. Descriptive only — no significance claims. Non-comparable run ids return `400`.
+
+#### GET `/api/v1/research/marginal-energy`
+
+**Query params:** `experiment_id` (optional), `page`, `page_size`
+
+Paginated `MarginalEnergyListResponse`.
+
+#### GET `/api/v1/research/marginal-energy/{attribution_id}`
+
+Returns a single attribution. `404` when unknown.
+
+### Interaction Effects
+
+#### POST `/api/v1/research/interaction-effects`
+
+Computes two-factor interaction effects for a run quartet. Returns `201` with `total`, `results[]`, and descriptive `statistics`.
+
+#### GET `/api/v1/research/interaction-effects`
+
+**Query params:** `experiment_id` (optional), `page`, `page_size`
+
+Paginated list. Established path name (stable contract) — filter by experiment with `?experiment_id=` rather than a separate route.
+
+#### GET `/api/v1/research/interaction-effects/{interaction_id}`
+
+Returns one stored interaction result. `404` when unknown.
+
+### Defense Energy Amplification
+
+#### POST `/api/v1/research/defense-energy-amplification`
+
+Computes energy amplification for a baseline/security pair. Returns `201` with `total`, `results[]`, and descriptive `statistics`.
+
+#### GET `/api/v1/research/defense-energy-amplification`
+
+**Query params:** `experiment_id` (optional), `page`, `page_size`
+
+Paginated list.
+
+#### GET `/api/v1/research/defense-energy-amplification/{amplification_id}`
+
+Returns one stored amplification result. `404` when unknown.
+
+### Research Analytics
+
+#### GET `/api/v1/research/analytics` · POST `/api/v1/research/analytics`
+
+`GET` lists stored research analytics records; `POST` computes and persists one (returns `ResearchAnalyticsResponse` with `analysis_id`, `analysis_version`, `n`, `metric`).
+
+#### GET `/api/v1/research/analytics/{analysis_id}`
+
+Returns a single research analytics record. `404` when unknown.
+
+### Research Summary
+
+#### GET `/api/v1/research/summary`
+
+Aggregate counts across the whole research store. Derived only from persisted rows.
+
+**Response:**
+```json
+{
+  "total_experiments": 4,
+  "total_trials": 12,
+  "attack_types": ["ddos"],
+  "security_controls": ["firewall"],
+  "measurement_modes": ["ESTIMATED"],
+  "estimated_trials": 12,
+  "measured_trials": 0,
+  "marginal_energy_observations": 6,
+  "interaction_observations": 0,
+  "amplification_observations": 3,
+  "carbon_observations": 6
+}
+```
+
+On an empty store every count is `0` and every list is `[]`. `estimated_trials` / `measured_trials` come from recorded `EnergyMeasurement.measurement_mode` values, not from provider names — hardware providers are unavailable, so `measured_trials` stays `0` unless real measurements exist.
+
+### Research Metrics
+
+#### GET `/api/v1/research/metrics`
+
+Descriptive statistics for six research metrics: `marginal_energy` (joules), `marginal_power` (watts), `marginal_carbon` (kg_co2), `interaction_effect`, `amplification_energy` (joules), `amplification_ratio`.
+
+Each block has `status` (`available` / `unavailable`), `observation_count`, `statistics`, `unit`, and `reason`. Unavailable blocks always report `statistics: null` and `observation_count: 0` — missing data is never back-filled. `std_dev_convention` is always `population_standard_deviation_n` (Phase 8 `descriptive_statistics`).
+
+### Export
+
+#### GET `/api/v1/research/export/csv`
+
+**Query params:** `dataset` — `experiments` | `marginal_energy` (default) | `interaction_effects` | `defense_amplification`
+
+Returns `text/csv` with `Content-Disposition: attachment; filename=carbon_guard_research_<dataset>.csv`.
+
+- Column names are fixed (derived from the export DTOs) and stable across releases.
+- An empty dataset returns the header row only — never fabricated rows.
+- Unsupported `dataset` values return `400`.
+
+#### GET `/api/v1/research/export/json`
+
+Returns the full research dataset as `ResearchExportResponse` with `Content-Disposition: attachment; filename=carbon_guard_research.json`:
+
+```json
+{
+  "exported_at": "2026-10-02T12:00:00Z",
+  "record_counts": {
+    "experiments": 4,
+    "marginal_energy": 6,
+    "interaction_effects": 0,
+    "defense_amplification": 3
+  },
+  "experiments": [],
+  "marginal_energy": [],
+  "interaction_effects": [],
+  "defense_amplification": []
+}
+```
+
+---
+
 ## Root Endpoints
 
 ### GET `/`

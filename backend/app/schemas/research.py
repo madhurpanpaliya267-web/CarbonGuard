@@ -127,6 +127,11 @@ class ExperimentListResponse(BaseModel):
     items: List[ExperimentResponse]
 
 
+class ExperimentRunListResponse(BaseModel):
+    total: int
+    items: List[ExperimentRunResponse]
+
+
 class MarginalEnergyComputeRequest(BaseModel):
     baseline_run_id: int
     security_run_id: int
@@ -491,3 +496,70 @@ class ResearchAnalyticsResponse(BaseModel):
 class ResearchAnalyticsListResponse(BaseModel):
     total: int
     items: List[ResearchAnalyticsResponse]
+
+
+class ResearchSummaryResponse(BaseModel):
+    """Aggregate counts over persisted research records.
+
+    Counting only. This DTO never estimates, interpolates or synthesises a
+    value: when a table is empty its observation count is ``0`` and the
+    corresponding list is empty.
+    """
+
+    total_experiments: int
+    total_trials: int
+    attack_types: List[str]
+    security_controls: List[str]
+    measurement_modes: List[str]
+    estimated_trials: int
+    measured_trials: int
+    marginal_energy_observations: int
+    interaction_observations: int
+    amplification_observations: int
+    carbon_observations: int
+
+
+class ResearchMetricBlock(BaseModel):
+    """Descriptive statistics for one observed research quantity.
+
+    ``status`` is ``available`` only when at least one observation exists.
+    Otherwise ``statistics`` is null, ``observation_count`` is ``0`` and
+    ``reason`` states that nothing has been recorded yet.
+    """
+
+    status: str
+    reason: Optional[str] = None
+    unit: Optional[str] = None
+    observation_count: int = 0
+    statistics: Optional[StatisticsSummary] = None
+
+
+class ResearchMetricsResponse(BaseModel):
+    """Descriptive-only research metrics.
+
+    Descriptive statistics never assert statistical significance; inferential
+    results are produced exclusively by the Phase 8 analytics endpoints.
+    """
+
+    marginal_energy: ResearchMetricBlock
+    marginal_power: ResearchMetricBlock
+    marginal_carbon: ResearchMetricBlock
+    interaction_effect: ResearchMetricBlock
+    amplification_energy: ResearchMetricBlock
+    amplification_ratio: ResearchMetricBlock
+    std_dev_convention: str
+
+
+class ResearchExportResponse(BaseModel):
+    """Full research dataset export built from response DTOs.
+
+    Every list is populated from already-persisted observations; an empty
+    research store yields empty lists, never fabricated records.
+    """
+
+    exported_at: datetime
+    record_counts: Dict[str, int]
+    experiments: List[ExperimentResponse]
+    marginal_energy: List[MarginalEnergyResponse]
+    interaction_effects: List[InteractionEffectResponse]
+    defense_amplification: List[DefenseAmplificationResponse]

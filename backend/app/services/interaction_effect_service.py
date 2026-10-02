@@ -485,6 +485,7 @@ class InteractionEffectService:
 
     def list_interaction_effects(
         self,
+        experiment_id: Optional[int] = None,
         attack_type: Optional[str] = None,
         attack_intensity: Optional[str] = None,
         measurement_mode: Optional[str] = None,
@@ -494,6 +495,7 @@ class InteractionEffectService:
         limit: int = 50,
     ) -> InteractionEffectListResponse:
         rows = self.interaction_repo.filter_interactions(
+            experiment_id=experiment_id,
             attack_type=attack_type,
             attack_intensity=attack_intensity,
             measurement_mode=measurement_mode,

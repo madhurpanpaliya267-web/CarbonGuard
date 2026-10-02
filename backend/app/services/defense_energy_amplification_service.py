@@ -511,6 +511,7 @@ class DefenseEnergyAmplificationService:
 
     def list_amplification(
         self,
+        experiment_id: Optional[int] = None,
         attack_type: Optional[str] = None,
         attack_intensity: Optional[str] = None,
         measurement_mode: Optional[str] = None,
@@ -519,6 +520,7 @@ class DefenseEnergyAmplificationService:
         limit: int = 50,
     ) -> DefenseAmplificationListResponse:
         rows = self.amplification_repo.filter_amplification(
+            experiment_id=experiment_id,
             attack_type=attack_type,
             attack_intensity=attack_intensity,
             measurement_mode=measurement_mode,
