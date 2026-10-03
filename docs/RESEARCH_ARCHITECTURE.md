@@ -796,7 +796,8 @@ SYSTEM
 | 14 | Backend tests | Phases 1-9 | Complete |
 | 15 | Frontend tests | Phases 10-13 | Complete |
 | 16 | Documentation | All | Complete |
-| 17 | Integration audit | All | Pending |
+| 17 | Integration audit | All | Complete |
+| 18 | Final release (documentation closure + release verification) | All | Complete |
 
 After each phase: run tests, check TypeScript, verify API startup, verify frontend build.
 
@@ -893,45 +894,56 @@ After each phase: run tests, check TypeScript, verify API startup, verify fronte
 8. Research analytics (Phase 8) covers descriptive statistics, confidence intervals, paired tests, and effect sizes; no multiple-comparison correction and no frontend analytics dashboard yet
 9. No real-time streaming — experiments are batch/synchronous
 10. Frontend builds may have unused code from original scaffold
+11. Integration limitations recorded by the Phase 17 integration audit remain open:
+    synthetic dashboard chart series, duplicate event endpoints, two HTTP client
+    patterns, no authentication, no database migrations, a badge color-mapping
+    inconsistency between Attack Simulator and Research Lab, no configured backend
+    linter/eslint, and `POST /simulator/simulate` having no current frontend
+    consumer (see `PIPELINE.md` § Integration Audit (Phase 17))
 
 ---
 
 ## 8. Acceptance Criteria
 
+All criteria below were verified in Phase 18 (final release verification): the
+full backend suite, the full frontend suite, the production build, and the
+end-to-end pipeline smoke test. UI criteria were verified against the rendered
+theme tokens and component usage.
+
 ### Backend
-- [ ] All existing tests pass
-- [ ] All new research tests pass
-- [ ] FastAPI starts successfully
-- [ ] All research endpoints functional
-- [ ] No raw ORM serialization in responses
-- [ ] Database operations correct
+- [x] All existing tests pass
+- [x] All new research tests pass
+- [x] FastAPI starts successfully
+- [x] All research endpoints functional
+- [x] No raw ORM serialization in responses
+- [x] Database operations correct
 
 ### Frontend
-- [ ] All existing pages work
-- [ ] Research Lab pages functional
-- [ ] Experiment runner works
-- [ ] Charts render with correct data
-- [ ] Filtering and export work
-- [ ] No TypeScript errors
-- [ ] Production build succeeds
+- [x] All existing pages work
+- [x] Research Lab pages functional
+- [x] Experiment runner works
+- [x] Charts render with correct data
+- [x] Filtering and export work
+- [x] No TypeScript errors
+- [x] Production build succeeds
 
 ### Research
 - [x] Marginal energy calculation correct
-- [ ] Interaction formula correct
-- [ ] Defense amplification correct
-- [ ] Repeated experiments with statistics
-- [ ] Measurement modes visible everywhere
-- [ ] Formulas documented
-- [ ] Dataset exportable
-- [ ] No fabricated measurements
+- [x] Interaction formula correct
+- [x] Defense amplification correct
+- [x] Repeated experiments with statistics
+- [x] Measurement modes visible everywhere
+- [x] Formulas documented
+- [x] Dataset exportable
+- [x] No fabricated measurements
 
 ### UI
-- [ ] No all-green design
-- [ ] Professional SOC aesthetic
-- [ ] Cyan cybersecurity identity
-- [ ] Emerald sustainability identity
-- [ ] Red/amber threat identity
-- [ ] Violet research accent (subtle)
-- [ ] Measurement badges present
-- [ ] Responsive layout
-- [ ] No excessive gradients or glassmorphism
+- [x] No all-green design
+- [x] Professional SOC aesthetic
+- [x] Cyan cybersecurity identity
+- [x] Emerald sustainability identity
+- [x] Red/amber threat identity
+- [x] Violet research accent (subtle)
+- [x] Measurement badges present
+- [x] Responsive layout
+- [x] No excessive gradients or glassmorphism

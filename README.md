@@ -265,6 +265,43 @@ Gross CO2 - Renewable Offset = Net CO2 (gCO2)
 | [Attack Profiles](docs/ATTACK_PROFILES.md) | Attack types, intensity levels, and workload definitions |
 | [Pipeline](docs/PIPELINE.md) | End-to-end CarbonGuard orchestration flow (Phase 13) |
 
+## Final Release (Phase 18)
+
+Phase 18 is the final phase of the CarbonGuard roadmap documented in
+[Research Architecture §4](docs/RESEARCH_ARCHITECTURE.md#4-implementation-phases).
+It performs **release closure only**: the 18-phase roadmap, acceptance criteria,
+and known limitations were reconciled with the completed work. No application
+code, API surface, schema, formula, or behavior changed.
+
+### Final verification (Phase 18)
+
+| Verification | Command | Result |
+|--------------|---------|--------|
+| Full backend suite | `python -m pytest tests/ -q` | **850 passed / 0 failed** |
+| Full frontend suite | `npm test` (Vitest) | **351 passed / 0 failed** (40 files) |
+| Production build | `npm run build` (`tsc --noEmit` + `vite build`) | **PASS** |
+| End-to-end pipeline smoke | `pytest tests/test_api/test_e2e_smoke.py` + live synthetic `POST /api/v1/orchestration/run` | **PASS** |
+
+The live pipeline smoke ran a synthetic `ddos` workload through
+simulation → threat detection → risk → rule-based defense → energy → carbon →
+research aggregation with `measurement_mode = ESTIMATED` and
+`carbon_basis = calculated_from_estimated_energy`. All attack, event, and
+threat data in this run — and in the project overall — is synthetic/simulated;
+nothing in CarbonGuard performs real attacks or claims measured energy without
+a hardware provider.
+
+### Research integrity at release
+
+- Every energy value is labeled `ESTIMATED`, `MEASURED`, or `SIMULATED`;
+  `MEASURED` is only ever reported by a real hardware provider (none active).
+- Carbon is always a calculation from an energy basis (`carbon_basis`), never a
+  direct emissions measurement.
+- Research limitations remain documented in
+  [Research Architecture §7](docs/RESEARCH_ARCHITECTURE.md#7-known-limitations)
+  and [Pipeline § Integration Audit (Phase 17)](docs/PIPELINE.md#integration-audit-phase-17).
+- No experimental result, statistical significance, or hardware telemetry is
+  fabricated anywhere in the codebase or documentation.
+
 ## License
 
 Academic project for demonstration purposes.

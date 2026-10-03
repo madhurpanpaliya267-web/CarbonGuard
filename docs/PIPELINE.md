@@ -233,7 +233,7 @@ Verified specifically:
   `period`, research `experiment_id`/`measurement_mode`/`control_name`).
 - **DTO contracts**: `ExperimentCreateRequest`, `ExperimentSummaryResponse`,
   `ExperimentStatusResponse`, `ResearchAnalyticsRequest`,
-  `ResearchSummaryResponse` and `OrchestrationRunResponse` (all 14 top-level
+  `ResearchSummaryResponse` and `OrchestrationRunResponse` (all 15 top-level
   keys) match their frontend TypeScript counterparts field-for-field.
 - **Orchestration chain**: attack → threat → risk → rule-based defense →
   energy provider → carbon → research recording → persistence feeds →
