@@ -198,6 +198,45 @@ Returns aggregate security statistics.
 
 ---
 
+## Orchestration (Phase 13)
+
+### POST `/api/v1/orchestration/run`
+
+Runs the complete end-to-end CarbonGuard pipeline: attack simulation →
+threat detection/classification → risk assessment → rule-based defense
+control selection → energy measurement → carbon calculation → optional
+research observation → analytics feeds.
+
+**Request body:**
+```json
+{
+  "attack_type": "ddos",
+  "intensity": "medium",
+  "duration_seconds": 60,
+  "measurement_provider": "estimated",
+  "record_research": true,
+  "experiment_uuid": "<existing experiment uuid>",
+  "carbon_intensity": 475,
+  "renewable_percentage": 25
+}
+```
+
+Only `attack_type` is required. `record_research` requires an existing
+`experiment_uuid`.
+
+**Response:** `status`, `event`, `attack`, `threat`, `risk`, `defense`,
+`security_controls`, `energy`, `carbon`, `comparison`, `research`,
+`analytics`, `provenance`, `stages`, `warnings`.
+
+Energy carries `measurement_mode` (ESTIMATED/MEASURED/SIMULATED); carbon
+carries `carbon_basis` (e.g. `calculated_from_estimated_energy`); control
+selection carries `basis: "rule_based"`. Optional stage failures return
+explicit `status`/`reason` fields instead of failing the run.
+
+See [PIPELINE.md](PIPELINE.md) for details.
+
+---
+
 ## Threats
 
 ### GET `/api/v1/threats`

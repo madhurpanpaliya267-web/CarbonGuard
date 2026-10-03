@@ -44,7 +44,10 @@ class SecurityService:
 
     def simulate(self, attack_type: str) -> dict:
         result = simulate_attack(attack_type)
+        return self.persist_simulation(result)
 
+    def persist_simulation(self, result: dict) -> dict:
+        """Persist an attack-simulation result as an event + threat pair."""
         event_data = result["event"]
         if isinstance(event_data.get("timestamp"), str):
             event_data["timestamp"] = datetime.fromisoformat(event_data["timestamp"])

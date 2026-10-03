@@ -195,3 +195,60 @@ def get_controls_for_attack(attack_type: str) -> list[SecurityControl]:
 def get_attack_types_for_control(control_id: str) -> tuple[str, ...]:
     validate_control_id(control_id)
     return SECURITY_CONTROLS[control_id].supported_attack_types
+
+
+SEVERITY_CONTROL_LIMITS: dict[str, Optional[int]] = {
+    "LOW": 1,
+    "MEDIUM": 2,
+    "HIGH": 4,
+    "CRITICAL": None,  # None = every control registered for the attack type
+}
+
+DEFAULT_SEVERITY_LIMIT = 2
+
+
+def select_controls_for_threat(
+    attack_type: str,
+    severity: str,
+    risk_score: Optional[float] = None,
+) -> dict:
+    """Rule-based control selection for a detected threat.
+
+    LOW threats get the minimum necessary controls, MEDIUM threats get a
+    moderate set, and HIGH/CRITICAL threats get the stronger set (CRITICAL
+    activates every control registered for the attack type).
+
+    This is a deterministic, registry-ordered rule — it is NOT an optimizer
+    and makes no claim of global optimality. Callers must describe the result
+    as rule-based/selected, never as optimal.
+    """
+    candidates = get_controls_for_attack(attack_type)
+    severity_key = (severity or "").strip().upper()
+    limit = SEVERITY_CONTROL_LIMITS.get(severity_key, DEFAULT_SEVERITY_LIMIT)
+
+    selected = list(candidates) if limit is None else candidates[:limit]
+
+    if not candidates:
+        reason = (
+            f"No registered security control supports attack type "
+            f"'{attack_type}'"
+        )
+        status = "none_available"
+    else:
+        reason = (
+            f"Rule-based tier {severity_key}: selected {len(selected)} of "
+            f"{len(candidates)} controls registered for '{attack_type}' "
+            f"(registry order, not an optimality claim)"
+        )
+        status = "selected" if selected else "none_available"
+
+    return {
+        "status": status,
+        "basis": "rule_based",
+        "tier": severity_key or "UNKNOWN",
+        "selected": [ctrl.control_id for ctrl in selected],
+        "available": [ctrl.control_id for ctrl in candidates],
+        "reason": reason,
+        "risk_score": risk_score,
+        "control_details": [ctrl.to_dict() for ctrl in selected],
+    }

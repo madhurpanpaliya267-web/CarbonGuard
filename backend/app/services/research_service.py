@@ -28,6 +28,7 @@ from app.repositories.research_repo import (
     ExperimentRunRepository,
     EnergyMeasurementRepository,
     SecurityEffectivenessRepository,
+    ResearchMetricRepository,
 )
 from app.engines.security.attack_profiles import (
     build_attack_profile,
@@ -81,6 +82,7 @@ class ResearchExperimentService:
         self.run_repo = ExperimentRunRepository(db)
         self.measurement_repo = EnergyMeasurementRepository(db)
         self.effectiveness_repo = SecurityEffectivenessRepository(db)
+        self.metric_repo = ResearchMetricRepository(db)
 
     def validate_experiment_config(self, config: dict) -> dict:
         errors = []
@@ -192,6 +194,113 @@ class ResearchExperimentService:
             raise
 
         return experiment
+
+    def record_pipeline_observation(
+        self,
+        experiment_uuid: str,
+        *,
+        attack_type: str,
+        attack_intensity: str,
+        security_controls: list[str],
+        measurement_mode: str,
+        measurement_source: str,
+        energy_joules: float,
+        power_watts: float,
+        duration_seconds: float,
+        threat_severity: str,
+        security_response: str,
+        risk_score: float,
+        carbon_net_kg: Optional[float] = None,
+        carbon_basis: Optional[str] = None,
+        carbon_intensity: Optional[float] = None,
+        attack_profile: Optional[dict] = None,
+    ) -> dict:
+        """Record one completed end-to-end pipeline run as a research run.
+
+        Reuses the existing experiment/run/measurement/effectiveness/metric
+        tables — no new storage. Each recorded pipeline run becomes the next
+        trial of the target experiment so Phase 5-7 analytics (marginal
+        energy, interaction effect, defense amplification) can consume it.
+        """
+        experiment = self.experiment_repo.get_by_uuid(experiment_uuid)
+        if not experiment:
+            raise ExperimentError(f"Experiment not found: {experiment_uuid}")
+
+        controls = _normalize_controls(security_controls)
+        existing_runs = self.run_repo.get_by_experiment(experiment.id)
+        trial_number = len(existing_runs) + 1
+        now = _now_utc()
+
+        workload_value = None
+        workload_unit = None
+        if attack_profile:
+            workload = attack_profile.get("workload") or {}
+            workload_value = workload.get("value")
+            workload_unit = workload.get("unit")
+
+        run = self.run_repo.create({
+            "experiment_id": experiment.id,
+            "trial_number": trial_number,
+            "attack_type": attack_type,
+            "attack_intensity": attack_intensity,
+            "attack_parameters": json.dumps(attack_profile) if attack_profile else None,
+            "workload_profile": f"{attack_type}_{attack_intensity}",
+            "workload_value": workload_value,
+            "workload_unit": workload_unit,
+            "security_controls": json.dumps(controls),
+            "control_count": len(controls),
+            "measurement_mode": measurement_mode,
+            "start_time": now,
+            "end_time": now,
+            "duration_seconds": duration_seconds,
+            "status": "completed",
+        })
+
+        measurement = self.measurement_repo.create({
+            "run_id": run.id,
+            "energy_joules": energy_joules,
+            "power_watts": power_watts,
+            "duration_seconds": duration_seconds,
+            "source": measurement_source,
+            "measurement_mode": measurement_mode,
+        })
+
+        effectiveness = self.effectiveness_repo.create({
+            "run_id": run.id,
+            "threat_severity": threat_severity,
+            "security_response": security_response,
+            "security_score": risk_score,
+            "controls_active": json.dumps(controls),
+            "controls_config": json.dumps({"controls": controls}),
+        })
+
+        carbon_metric = None
+        if carbon_net_kg is not None:
+            carbon_metric = self.metric_repo.create({
+                "run_id": run.id,
+                "metric_name": "pipeline_net_carbon_kg",
+                "metric_value": carbon_net_kg,
+                "unit": "kg",
+                "measurement_mode": measurement_mode,
+                "notes": (
+                    f"net CO2 via calculate_carbon; carbon basis: "
+                    f"{carbon_basis or 'unspecified'}; carbon intensity: "
+                    f"{carbon_intensity}"
+                ),
+            })
+
+        return {
+            "status": "recorded",
+            "experiment_uuid": experiment.experiment_uuid,
+            "experiment_id": experiment.id,
+            "run_id": run.id,
+            "run_uuid": run.run_uuid,
+            "trial_number": trial_number,
+            "measurement_id": measurement.id,
+            "security_effectiveness_id": effectiveness.id,
+            "carbon_metric_id": carbon_metric.id if carbon_metric else None,
+            "recorded_at": now.isoformat(),
+        }
 
     def _execute_trial(self, experiment: Experiment, trial_num: int, controls: list[str]):
         run_data = {

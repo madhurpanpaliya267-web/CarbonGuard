@@ -14,6 +14,7 @@ from app.api import (
     system_health,
     settings,
     research,
+    orchestration,
 )
 
 router = APIRouter(prefix="/api/v1")
@@ -32,3 +33,4 @@ router.include_router(events.router, prefix="/events", tags=["Events"])
 router.include_router(system_health.router, prefix="/system-health", tags=["System Health"])
 router.include_router(settings.router, prefix="/settings", tags=["Settings"])
 router.include_router(research.router, prefix="/research", tags=["Research"])
+router.include_router(orchestration.router, prefix="/orchestration", tags=["Orchestration"])

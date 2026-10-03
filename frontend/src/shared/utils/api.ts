@@ -27,6 +27,7 @@ import type {
   SecurityEventDetail,
   AttackTypeInfo,
   SimulationResult,
+  OrchestrationResult,
   ThreatDetail,
   ThreatStats,
   ThreatExplanation,
@@ -267,6 +268,18 @@ export const api = {
 
   simulateAttack: (attackType: string): Promise<SimulationResult> =>
     apiClient.post('/simulator/simulate', { attack_type: attackType }),
+
+  runPipeline: (
+    attackType: string,
+    options?: { intensity?: string; recordResearch?: boolean; experimentUuid?: string },
+  ): Promise<OrchestrationResult> =>
+    apiClient.post('/orchestration/run', {
+      attack_type: attackType,
+      ...(options?.intensity ? { intensity: options.intensity } : {}),
+      ...(options?.recordResearch
+        ? { record_research: true, experiment_uuid: options.experimentUuid }
+        : {}),
+    }),
 
   getThreats: (params?: {
     severity?: string

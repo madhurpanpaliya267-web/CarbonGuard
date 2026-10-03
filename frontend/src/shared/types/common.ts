@@ -144,6 +144,149 @@ export interface PipelineStep {
   detail: string
 }
 
+export interface AttackSection {
+  attack_type: string
+  intensity: string | null
+  duration_seconds: number
+  description: string | null
+  detection_method: string | null
+  detection_confidence: number | null
+  detection_estimate: {
+    energy_kwh: number | null
+    co2_kg: number | null
+    source: string
+    note: string
+  }
+  workload: WorkloadImpact
+  attack_profile: Record<string, unknown> | null
+  synthetic: boolean
+}
+
+export interface DefenseControlDetail {
+  control_id: string
+  display_name: string
+  category: string
+  description: string
+  supported_attack_types: string[]
+  config_parameters: Record<string, unknown>
+  enabled_by_default: boolean
+}
+
+export interface DefenseDecision {
+  status: string
+  basis: string
+  tier: Severity
+  selected: string[]
+  available: string[]
+  reason: string
+  risk_score: number | null
+  control_details: DefenseControlDetail[]
+  activated: boolean
+  response: string
+  recommendation: SimulationRecommendation
+}
+
+export interface EnergySection {
+  status: string
+  energy_joules: number | null
+  energy_kwh: number | null
+  power_watts: number | null
+  duration_seconds: number | null
+  measurement_mode: string | null
+  measurement_source: string | null
+  provider: string | null
+  security_controls_active: number
+  estimated: boolean | null
+  reason: string | null
+}
+
+export interface CarbonSection {
+  status: string
+  reason: string | null
+  energy_kwh: number | null
+  carbon_intensity: number | null
+  renewable_pct: number | null
+  gross_co2_kg: number | null
+  renewable_offset_kg: number | null
+  net_co2_kg: number | null
+  carbon_basis: string | null
+  measurement_mode: string | null
+  calculation_breakdown: string | null
+}
+
+export interface ComparisonSection {
+  status: string
+  reason: string | null
+  basis: string | null
+  measurement_mode: string | null
+  baseline_energy_kwh: number | null
+  defense_energy_kwh: number | null
+  energy_difference_kwh: number | null
+  baseline_carbon_kg: number | null
+  defense_carbon_kg: number | null
+  carbon_difference_kg: number | null
+  direction: string | null
+  interpretation: string | null
+}
+
+export interface ResearchSection {
+  status: string
+  reason: string | null
+  experiment_uuid: string | null
+  experiment_id?: number | null
+  run_id: number | null
+  run_uuid?: string | null
+  trial_number: number | null
+  measurement_id?: number | null
+  security_effectiveness_id?: number | null
+  carbon_metric_id?: number | null
+  recorded_at?: string | null
+}
+
+export interface AnalyticsSection {
+  status: string
+  recorded: boolean
+  feeds: string[]
+  detail: string
+}
+
+export interface PipelineProvenance {
+  data_classification: string
+  simulated_attack: boolean
+  measurement_mode: string | null
+  measurement_source: string | null
+  carbon_basis: string | null
+  energy_engine: string
+  carbon_engine: string
+  control_selection: string
+  pipeline_version: string
+  generated_at: string
+  notes: string
+}
+
+export interface PipelineWarning {
+  stage: string
+  reason: string
+}
+
+export interface OrchestrationResult {
+  status: string
+  event: SecurityEventDetail
+  attack: AttackSection
+  threat: ThreatDetail
+  risk: RiskAssessment
+  defense: DefenseDecision
+  security_controls: string[]
+  energy: EnergySection
+  carbon: CarbonSection
+  comparison: ComparisonSection
+  research: ResearchSection
+  analytics: AnalyticsSection
+  provenance: PipelineProvenance
+  stages: PipelineStep[]
+  warnings: PipelineWarning[]
+}
+
 export interface ThreatStats {
   total_threats: number
   active_threats: number

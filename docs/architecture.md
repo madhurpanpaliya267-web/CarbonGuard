@@ -241,6 +241,18 @@ sequenceDiagram
     FE-->>U: Display pipeline + results
 ```
 
+## Data Flow: End-to-End CarbonGuard Pipeline (Phase 13)
+
+`POST /api/v1/orchestration/run` extends the simulation flow above into the
+complete lifecycle: attack → threat → risk → rule-based defense controls →
+energy measurement (provider abstraction) → carbon calculation → optional
+research observation → analytics feeds. It orchestrates the existing engines
+and services without adding duplicate formulas or storage.
+
+See [PIPELINE.md](PIPELINE.md) for the component mapping, provenance rules
+(energy measurement mode, carbon basis), failure handling and the response
+schema.
+
 ## Carbon Calculation Formula
 
 ```
