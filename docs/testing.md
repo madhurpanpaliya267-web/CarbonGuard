@@ -10,11 +10,11 @@ This document describes the testing approach for both backend and frontend.
 | Backend Engines | pytest | 264 | 13 engine modules |
 | Backend Services | pytest | 381 | 16 service modules |
 | Backend Models/Repos | pytest | 35 | Research repository layer |
-| Frontend Pages | Vitest | 127 | All 18 feature test files |
+| Frontend Pages | Vitest | 223 | All 22 feature test files |
 | Frontend Components | Vitest | 89 | 13 shared UI components |
-| Frontend Utilities | Vitest | 28 | Formatters, export helpers |
+| Frontend Utilities | Vitest | 33 | Formatters, export, research API helpers |
 | Frontend Routing/Layout | Vitest | 6 | App routes, main layout |
-| **Total** | | **1099** | 849 backend + 250 frontend |
+| **Total** | | **1200** | 849 backend + 351 frontend |
 
 ## Backend Testing
 
@@ -153,9 +153,10 @@ frontend/src/
 │   ├── layouts/__tests__/
 │   │   └── MainLayout.test.tsx    # 3 tests
 │   └── utils/__tests__/
+│       ├── api.test.ts            # 5 tests (Phase 13 runPipeline payloads)
 │       ├── exportData.test.ts     # 8 tests
 │       └── formatters.test.ts     # 20 tests
-└── features/                      # 18 files, 127 tests
+└── features/                      # 22 files, 223 tests
     ├── ai-recommendations/__tests__/AiRecommendationsPage.test.tsx # 8
     ├── analytics/__tests__/AnalyticsPage.test.tsx # 6
     ├── attack-simulator/__tests__/AttackSimulatorPage.test.tsx # 6
@@ -170,6 +171,10 @@ frontend/src/
     ├── research-lab/__tests__/ResearchDatasetPage.test.tsx # 7
     ├── research-lab/__tests__/ResearchLabPage.test.tsx # 11
     ├── research-lab/__tests__/ResearchSectionPages.test.tsx # 10
+    ├── research-lab/__tests__/format.test.ts # 48 (Phase 15)
+    ├── research-lab/__tests__/researchMetrics.test.ts # 22 (Phase 15)
+    ├── research-lab/__tests__/researchApi.test.ts # 15 (Phase 15)
+    ├── research-lab/__tests__/researchHooks.test.tsx # 11 (Phase 15)
     ├── security/__tests__/SecurityPage.test.tsx # 8
     ├── settings/__tests__/SettingsPage.test.tsx # 7
     ├── system-health/__tests__/SystemHealthPage.test.tsx # 5
@@ -253,14 +258,30 @@ cap/defensive branches) and `statistics.py` (96%; remaining lines are
 defensive/numerical edge cases). `research_service.py` pipeline-observation
 lines are covered by `test_orchestration_service.py` in the full suite.
 
+### Research Frontend Coverage (Phase 15)
+
+Phase 15 closed frontend test gaps for Phases 10-13. New unit suites cover the
+previously untested research-lab logic layer (101 tests):
+
+- `research-lab/utils/format.test.ts` (48) — formatting, `parseControls`,
+  and the ESTIMATED/MEASURED/SIMULATED `modeVariant` provenance mapping
+- `research-lab/utils/researchMetrics.test.ts` (22) — carbon formula
+  (`calculateCarbonKg`), aggregation helpers, provenance constants
+- `research-lab/api/researchApi.test.ts` (15) — query building, GET/POST
+  wiring, API error surfacing, export endpoints
+- `research-lab/hooks/researchHooks.test.tsx` (11) — `useResearchQuery`,
+  `useResearchLabData`, `useExperimentSummaries` success/error/partial-failure
+- `shared/utils/api.test.ts` (5) — Phase 13 `runPipeline` payload shapes
+  (defaults, intensity, `record_research` + `experiment_uuid`)
+
 ### Frontend Coverage by Area
 
 | Area | Tests | What's Covered |
 |------|-------|----------------|
-| Pages | 127 | Loading states, content rendering, user interactions |
+| Pages | 223 | Loading states, content rendering, user interactions, research logic |
 | Shared Components | 89 | Props, variants, states, accessibility |
 | Routing | 3 | Route rendering, sidebar, header |
-| Utilities | 28 | Date/number formatting, CO2 units, export helpers |
+| Utilities | 33 | Date/number formatting, CO2 units, export helpers, research API |
 | Layout | 3 | Sidebar, header, outlet rendering |
 
 ## What's NOT Tested
