@@ -176,6 +176,12 @@ class TestPairedTTest:
         with pytest.raises(ValueError):
             paired_t_test([1.0, 2.0], alternative="sideways")
 
+    def test_invalid_significance_level(self):
+        with pytest.raises(ValueError, match="significance_level"):
+            paired_t_test([1.0, 2.0, 3.0], significance_level=1.5)
+        with pytest.raises(ValueError, match="significance_level"):
+            paired_t_test([1.0, 2.0, 3.0], significance_level=0.0)
+
     def test_deterministic_repeat(self):
         values = [0.5, -1.0, 3.25, 2.0]
         assert paired_t_test(values) == paired_t_test(values)
@@ -238,6 +244,37 @@ class TestWilcoxonSignedRank:
     def test_deterministic_repeat(self):
         values = [1.0, -2.0, 3.0, 4.0, -5.0, 6.0]
         assert wilcoxon_signed_rank(values) == wilcoxon_signed_rank(values)
+
+    def test_invalid_alternative(self):
+        with pytest.raises(ValueError):
+            wilcoxon_signed_rank([1.0, 2.0, 3.0], alternative="sideways")
+
+    def test_invalid_significance_level(self):
+        with pytest.raises(ValueError, match="significance_level"):
+            wilcoxon_signed_rank([1.0, 2.0, 3.0], significance_level=0.0)
+        with pytest.raises(ValueError, match="significance_level"):
+            wilcoxon_signed_rank([1.0, 2.0, 3.0], significance_level=1.0)
+
+    def test_one_sided_directional_alternatives(self):
+        positive = [1.0, 2.0, 3.0, 4.0, 5.0]
+        two_sided = wilcoxon_signed_rank(positive, alternative="two-sided")
+        greater = wilcoxon_signed_rank(positive, alternative="greater")
+        less = wilcoxon_signed_rank(positive, alternative="less")
+
+        assert greater["alternative"] == "greater"
+        assert less["alternative"] == "less"
+        assert greater["p_value"] < two_sided["p_value"]
+        assert less["p_value"] > two_sided["p_value"]
+        assert two_sided["p_value"] == pytest.approx(2.0 * greater["p_value"])
+
+        negative = [-1.0, -2.0, -3.0, -4.0, -5.0]
+        two_neg = wilcoxon_signed_rank(negative, alternative="two-sided")
+        greater_neg = wilcoxon_signed_rank(negative, alternative="greater")
+        less_neg = wilcoxon_signed_rank(negative, alternative="less")
+
+        assert less_neg["p_value"] < two_neg["p_value"]
+        assert greater_neg["p_value"] > two_neg["p_value"]
+        assert two_neg["p_value"] == pytest.approx(2.0 * less_neg["p_value"])
 
 
 class TestEffectSizes:

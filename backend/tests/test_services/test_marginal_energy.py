@@ -386,3 +386,26 @@ class TestAllAttackTypes:
         assert attribution.attack_intensity == intensity
         assert attribution.baseline_energy_joules > 0
         assert attribution.security_energy_joules > 0
+
+
+class TestMissingMeasurement:
+    def test_missing_security_measurement_rejected(
+        self, marginal_svc, research_svc, db_session
+    ):
+        exp_a, runs_a = _run_experiment(research_svc, "ddos", "low", [], trials=1)
+        exp_b, runs_b = _run_experiment(
+            research_svc, "ddos", "low", ["firewall"], trials=1
+        )
+        db_session.query(EnergyMeasurement).filter(
+            EnergyMeasurement.run_id == runs_b[0].id
+        ).delete()
+        db_session.commit()
+
+        with pytest.raises(
+            MarginalEnergyError, match="No energy measurement found for run"
+        ):
+            marginal_svc.compute_pair(
+                experiment_id=exp_b.id,
+                baseline_run_id=runs_a[0].id,
+                security_run_id=runs_b[0].id,
+            )

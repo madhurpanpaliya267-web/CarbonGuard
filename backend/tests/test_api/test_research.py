@@ -187,3 +187,72 @@ class TestResearchAPI:
         runs = client.get(f"/api/v1/research/experiments/{uuid}/runs")
         controls = json.loads(runs.json()["items"][0]["security_controls"])
         assert "waf" in controls
+
+    def test_execute_experiment_not_found(self, client):
+        response = client.post("/api/v1/research/experiments/nonexistent/execute")
+        assert response.status_code == 400
+        assert "not found" in response.json()["detail"].lower()
+
+    def test_experiment_status_not_found(self, client):
+        response = client.get("/api/v1/research/experiments/nonexistent/status")
+        assert response.status_code == 404
+
+    def test_experiment_runs_not_found(self, client):
+        response = client.get("/api/v1/research/experiments/nonexistent/runs")
+        assert response.status_code == 404
+
+    def test_experiment_summary_not_found(self, client):
+        response = client.get("/api/v1/research/experiments/nonexistent/summary")
+        assert response.status_code == 404
+
+    def test_experiment_marginal_energy_via_api(self, client):
+        create = client.post("/api/v1/research/experiments", json={
+            "name": "API Marginal Energy",
+            "experiment_type": "MARGINAL_ENERGY",
+            "attack_type": "port_scan",
+            "attack_intensity": "low",
+            "security_controls": [],
+            "duration_seconds": 30,
+            "number_of_trials": 2,
+        })
+        uuid = create.json()["experiment_uuid"]
+        execute = client.post(f"/api/v1/research/experiments/{uuid}/execute")
+        assert execute.json()["status"] == "completed"
+
+        response = client.post(
+            f"/api/v1/research/experiments/{uuid}/marginal-energy"
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        item = data["items"][0]
+        assert item["marginal_energy_joules"] is not None
+        assert item["measurement_mode"] == "ESTIMATED"
+        assert item["baseline_run_id"] != item["security_run_id"]
+
+    def test_experiment_marginal_energy_not_found(self, client):
+        response = client.post(
+            "/api/v1/research/experiments/nonexistent/marginal-energy"
+        )
+        assert response.status_code == 400
+        assert "not found" in response.json()["detail"].lower()
+
+    def test_experiment_marginal_energy_requires_two_runs(self, client):
+        create = client.post("/api/v1/research/experiments", json={
+            "name": "API Marginal Single Run",
+            "experiment_type": "MARGINAL_ENERGY",
+            "attack_type": "brute_force",
+            "attack_intensity": "low",
+            "security_controls": [],
+            "duration_seconds": 30,
+            "number_of_trials": 1,
+        })
+        uuid = create.json()["experiment_uuid"]
+        execute = client.post(f"/api/v1/research/experiments/{uuid}/execute")
+        assert execute.json()["status"] == "completed"
+
+        response = client.post(
+            f"/api/v1/research/experiments/{uuid}/marginal-energy"
+        )
+        assert response.status_code == 400
+        assert "at least 2 runs" in response.json()["detail"]

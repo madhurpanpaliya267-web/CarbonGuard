@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.models.base import Base
+from app.models.research import DefenseAmplificationResult, ExperimentRun
 from app.services.research_service import ResearchExperimentService
 from app.services.defense_energy_amplification_service import (
     DefenseEnergyAmplificationService,
@@ -732,3 +733,56 @@ class TestListing:
         assert fetched.defense_energy_amplification == created.defense_energy_amplification
         assert fetched.baseline_run_id == created.baseline_run_id
         assert fetched.statistics == created.statistics
+
+
+class TestValidationEdges:
+    def test_controls_key_invalid_json_fallback(self):
+        invalid = ExperimentRun(security_controls="{not-json")
+        assert DefenseEnergyAmplificationService._controls_key(invalid) == "{not-json"
+        non_list = ExperimentRun(security_controls='"firewall"')
+        assert DefenseEnergyAmplificationService._controls_key(non_list) == '"firewall"'
+
+    def test_negative_workload_rejected(
+        self, amplification_svc, research_svc, db_session
+    ):
+        pair = _pair(research_svc)
+        run_repo = ExperimentRunRepository(db_session)
+        for run_id in pair["baseline_run_ids"] + pair["defense_run_ids"]:
+            run_repo.update(run_repo.get_by_id(run_id), {"workload_value": -5})
+        with pytest.raises(
+            DefenseEnergyAmplificationError, match="Invalid workload value"
+        ):
+            _compute(amplification_svc, pair)
+
+    def test_missing_workload_unit_rejected(
+        self, amplification_svc, research_svc, db_session
+    ):
+        pair = _pair(research_svc)
+        run_repo = ExperimentRunRepository(db_session)
+        for run_id in pair["baseline_run_ids"] + pair["defense_run_ids"]:
+            run_repo.update(run_repo.get_by_id(run_id), {"workload_unit": None})
+        with pytest.raises(
+            DefenseEnergyAmplificationError,
+            match="Invalid workload unit for baseline run",
+        ):
+            _compute(amplification_svc, pair)
+
+    def test_to_response_without_statistics(self, amplification_svc, db_session):
+        row = DefenseAmplificationResult(
+            experiment_id=1,
+            control_name="firewall",
+            attack_type="ddos",
+            attack_intensity="low",
+            attack_workload=500.0,
+            workload_unit="packets_per_second",
+            energy_attack_only=5000.0,
+            energy_attack_defense=5100.0,
+            additional_defense_energy=100.0,
+            defense_energy_amplification=0.2,
+            formula_version="defense_energy_amplification_v1",
+        )
+        db_session.add(row)
+        db_session.commit()
+
+        response = amplification_svc._to_response(row)
+        assert response.statistics is None

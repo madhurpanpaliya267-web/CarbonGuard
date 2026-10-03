@@ -1,5 +1,6 @@
 import itertools
 import math
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import create_engine
@@ -20,8 +21,9 @@ from app.services.research_analytics_service import (
     ResearchAnalyticsService,
     AnalyticsInsufficientDataError,
     AnalyticsValidationError,
+    _group_value,
 )
-from app.schemas.research import ResearchAnalyticsRequest
+from app.schemas.research import ResearchAnalyticsFilters, ResearchAnalyticsRequest
 from app.engines.analytics.statistics import (
     POPULATION_STD_CONVENTION,
     SAMPLE_STD_CONVENTION,
@@ -903,3 +905,123 @@ class TestCarbonPerWorkloadMetrics:
             for item in response.limitations
         )
         assert any("not from grid telemetry" in item for item in response.limitations)
+
+
+class TestGroupValue:
+    def test_none_is_unknown(self):
+        row = SimpleNamespace(attack_type=None)
+        assert _group_value(row, "attack_type") == "unknown"
+
+    def test_nan_float(self):
+        row = SimpleNamespace(attack_workload=float("nan"))
+        assert _group_value(row, "attack_workload") == "nan"
+
+    def test_integral_float(self):
+        row = SimpleNamespace(attack_workload=3.0)
+        assert _group_value(row, "attack_workload") == "3"
+
+    def test_fractional_float(self):
+        row = SimpleNamespace(attack_workload=3.5)
+        assert _group_value(row, "attack_workload") == "3.5"
+
+    def test_non_float_stringified(self):
+        row = SimpleNamespace(attack_type=7)
+        assert _group_value(row, "attack_type") == "7"
+
+
+class TestWilcoxonDirectionalHypotheses:
+    def test_directional_alternatives(self, analytics_svc, db_session, research_svc,
+                                      amp_svc):
+        _seed_amplification(db_session, amp_svc, research_svc, trials=3)
+        greater = analytics_svc.analyze(
+            _req("amplification", "additional_defense_energy",
+                 hypothesis_test="wilcoxon_signed_rank", alternative="greater")
+        )
+        less = analytics_svc.analyze(
+            _req("amplification", "additional_defense_energy",
+                 hypothesis_test="wilcoxon_signed_rank", alternative="less")
+        )
+        assert greater.hypothesis_test.alternative_hypothesis == (
+            "Median paired difference > 0"
+        )
+        assert less.hypothesis_test.alternative_hypothesis == (
+            "Median paired difference < 0"
+        )
+        assert greater.hypothesis_test.p_value < less.hypothesis_test.p_value
+
+
+class TestGroupHypothesisWarnings:
+    def test_single_observation_group_omits_test(self, analytics_svc, db_session):
+        _amp_row(db_session, attack_type="ddos")
+        _amp_row(db_session, attack_type="ddos")
+        _amp_row(db_session, attack_type="port_scan")
+        response = analytics_svc.analyze(
+            _req("amplification", "additional_defense_energy",
+                 group_by=["attack_type"], hypothesis_test="paired_t")
+        )
+        groups = {g.group["attack_type"]: g for g in response.groups}
+        assert groups["ddos"].hypothesis_test is not None
+        assert groups["port_scan"].hypothesis_test is None
+        assert any(
+            "at least 2 paired observations (n=1)" in w
+            for w in groups["port_scan"].warnings
+        )
+
+    def test_mixed_context_group_omits_test(self, analytics_svc, db_session):
+        _amp_row(db_session, control_name="firewall", attack_type="ddos")
+        _amp_row(db_session, control_name="firewall", attack_type="port_scan")
+        _amp_row(db_session, control_name="ids", attack_type="ddos")
+        _amp_row(db_session, control_name="ids", attack_type="ddos")
+        response = analytics_svc.analyze(
+            _req("amplification", "additional_defense_energy",
+                 group_by=["control_name"], hypothesis_test="paired_t")
+        )
+        groups = {g.group["control_name"]: g for g in response.groups}
+        assert groups["firewall"].hypothesis_test is None
+        assert any(
+            "mixed attack contexts" in w for w in groups["firewall"].warnings
+        )
+        assert groups["ids"].hypothesis_test is not None
+
+
+class TestPostFetchFilters:
+    def test_workload_unit_filter_excludes_rows(self, analytics_svc, db_session):
+        _amp_row(db_session, workload_unit="packets_per_second")
+        _amp_row(db_session, workload_unit="requests_per_second")
+        _amp_row(db_session, workload_unit="packets_per_second")
+        response = analytics_svc.analyze(
+            _req("amplification", "additional_defense_energy",
+                 filters=ResearchAnalyticsFilters(
+                     workload_unit="packets_per_second"))
+        )
+        assert response.n == 2
+
+    def test_energy_provider_filter_excludes_rows(self, analytics_svc, db_session):
+        _amp_row(db_session, energy_provider="estimated")
+        _amp_row(db_session, energy_provider="custom_model")
+        _amp_row(db_session, energy_provider="estimated")
+        response = analytics_svc.analyze(
+            _req("amplification", "additional_defense_energy",
+                 filters=ResearchAnalyticsFilters(energy_provider="estimated"))
+        )
+        assert response.n == 2
+
+
+class TestProvenanceLimitations:
+    def test_simulated_mode_limitation(self, analytics_svc, db_session):
+        _amp_row(db_session, measurement_mode="SIMULATED")
+        _amp_row(db_session, measurement_mode="SIMULATED")
+        response = analytics_svc.analyze(
+            _req("amplification", "additional_defense_energy")
+        )
+        assert response.limitations[0].startswith("Energy values are SIMULATED")
+
+    def test_measured_mode_limitation(self, analytics_svc, db_session):
+        _amp_row(db_session, measurement_mode="MEASURED",
+                 energy_provider="hardware_monitor")
+        _amp_row(db_session, measurement_mode="MEASURED",
+                 energy_provider="hardware_monitor")
+        response = analytics_svc.analyze(
+            _req("amplification", "additional_defense_energy")
+        )
+        assert response.limitations[0].startswith("Energy values are MEASURED")

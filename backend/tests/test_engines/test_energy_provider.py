@@ -190,6 +190,11 @@ class TestHardwareProviders:
         with pytest.raises(NotImplementedError, match="External meter"):
             provider.get_measurement(duration_seconds=1.0)
 
+    def test_hardware_source_names(self):
+        assert RaplEnergyProvider().get_source_name() == "rapl"
+        assert KeplerEnergyProvider().get_source_name() == "kepler"
+        assert ExternalMeterProvider().get_source_name() == "external_meter"
+
 
 class TestProviderFactory:
     def test_get_estimated_provider(self):

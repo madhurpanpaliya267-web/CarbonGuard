@@ -8,6 +8,7 @@ from app.models.research import (
     ResearchMetric,
     InteractionResult,
     DefenseAmplificationResult,
+    EnergyAttribution,
 )
 from app.repositories.research_repo import (
     ExperimentRepository,
@@ -17,6 +18,7 @@ from app.repositories.research_repo import (
     ResearchMetricRepository,
     InteractionResultRepository,
     DefenseAmplificationResultRepository,
+    EnergyAttributionRepository,
 )
 
 
@@ -697,3 +699,145 @@ class TestDefenseAmplificationResultRepository:
 
         results = da_repo.get_by_attack_type("ddos")
         assert len(results) == 1
+
+
+class TestRepositoryFilterGaps:
+    """Phase 14: repository query paths not exercised elsewhere."""
+
+    def test_experiment_get_by_status(self, db):
+        repo = ExperimentRepository(db)
+        repo.create({"name": "Created", "experiment_type": "marginal_energy", "attack_type": "ddos", "attack_intensity": "LOW", "status": "created"})
+        repo.create({"name": "Completed", "experiment_type": "marginal_energy", "attack_type": "ddos", "attack_intensity": "LOW", "status": "completed"})
+
+        created = repo.get_by_status("created")
+        assert [e.name for e in created] == ["Created"]
+        assert repo.get_by_status("archived") == []
+
+    def test_filter_experiments_by_status(self, db):
+        repo = ExperimentRepository(db)
+        repo.create({"name": "S1", "experiment_type": "marginal_energy", "attack_type": "ddos", "attack_intensity": "LOW", "status": "created"})
+        repo.create({"name": "S2", "experiment_type": "marginal_energy", "attack_type": "ddos", "attack_intensity": "LOW", "status": "completed"})
+
+        results = repo.filter_experiments(status="completed")
+        assert len(results) == 1
+        assert results[0].name == "S2"
+
+    def test_run_get_by_uuid(self, db):
+        exp = ExperimentRepository(db).create({"name": "T", "experiment_type": "marginal_energy", "attack_type": "ddos", "attack_intensity": "LOW"})
+        run_repo = ExperimentRunRepository(db)
+        run = run_repo.create({"experiment_id": exp.id, "trial_number": 1, "attack_type": "ddos", "attack_intensity": "LOW"})
+
+        found = run_repo.get_by_uuid(run.run_uuid)
+        assert found is not None
+        assert found.id == run.id
+        assert run_repo.get_by_uuid("no-such-run") is None
+
+    def test_metric_get_by_run(self, db):
+        exp = ExperimentRepository(db).create({"name": "T", "experiment_type": "marginal_energy", "attack_type": "ddos", "attack_intensity": "LOW"})
+        run = ExperimentRunRepository(db).create({"experiment_id": exp.id, "trial_number": 1, "attack_type": "ddos", "attack_intensity": "LOW"})
+        metric_repo = ResearchMetricRepository(db)
+        metric_repo.create({"run_id": run.id, "metric_name": "marginal_energy_joules", "metric_value": 10.0, "unit": "joules", "measurement_mode": "ESTIMATED"})
+        metric_repo.create({"run_id": run.id, "metric_name": "marginal_carbon_kg", "metric_value": 0.5, "unit": "kg_co2", "measurement_mode": "ESTIMATED"})
+
+        metrics = metric_repo.get_by_run(run.id)
+        assert len(metrics) == 2
+        assert [m.metric_name for m in metrics] == [
+            "marginal_carbon_kg", "marginal_energy_joules",
+        ]
+
+    def test_metric_get_by_name(self, db):
+        exp = ExperimentRepository(db).create({"name": "T", "experiment_type": "marginal_energy", "attack_type": "ddos", "attack_intensity": "LOW"})
+        run = ExperimentRunRepository(db).create({"experiment_id": exp.id, "trial_number": 1, "attack_type": "ddos", "attack_intensity": "LOW"})
+        metric_repo = ResearchMetricRepository(db)
+        metric_repo.create({"run_id": run.id, "metric_name": "marginal_energy_joules", "metric_value": 10.0, "unit": "joules", "measurement_mode": "ESTIMATED"})
+        metric_repo.create({"run_id": run.id, "metric_name": "marginal_carbon_kg", "metric_value": 0.5, "unit": "kg_co2", "measurement_mode": "ESTIMATED"})
+
+        named = metric_repo.get_by_name("marginal_energy_joules")
+        assert len(named) == 1
+        scoped = metric_repo.get_by_name("marginal_energy_joules", experiment_id=exp.id)
+        assert len(scoped) == 1
+        assert metric_repo.get_by_name("marginal_energy_joules", experiment_id=999999) == []
+
+    def test_interaction_get_by_experiment_and_intensity_filter(self, db):
+        exp_repo = ExperimentRepository(db)
+        exp = exp_repo.create({"name": "INT", "experiment_type": "interaction", "attack_type": "ddos", "attack_intensity": "MEDIUM"})
+        other = exp_repo.create({"name": "OTHER", "experiment_type": "interaction", "attack_type": "ddos", "attack_intensity": "LOW"})
+        ir_repo = InteractionResultRepository(db)
+        ir_repo.create({
+            "experiment_id": exp.id,
+            "control_a": "firewall", "control_b": "ids",
+            "energy_baseline": 100, "energy_a": 120, "energy_b": 130, "energy_ab": 170,
+            "interaction_effect": 20, "attack_type": "ddos", "attack_intensity": "MEDIUM",
+        })
+        ir_repo.create({
+            "experiment_id": other.id,
+            "control_a": "firewall", "control_b": "waf",
+            "energy_baseline": 100, "energy_a": 120, "energy_b": 125, "energy_ab": 155,
+            "interaction_effect": 10, "attack_type": "ddos", "attack_intensity": "LOW",
+        })
+
+        by_exp = ir_repo.get_by_experiment(exp.id)
+        assert len(by_exp) == 1
+        assert by_exp[0].experiment_id == exp.id
+
+        by_intensity = ir_repo.filter_interactions(attack_intensity="LOW")
+        assert len(by_intensity) == 1
+        assert by_intensity[0].attack_intensity == "LOW"
+
+    def test_amplification_get_by_experiment(self, db):
+        exp = ExperimentRepository(db).create({"name": "AMP", "experiment_type": "amplification", "attack_type": "ddos", "attack_intensity": "HIGH"})
+        other = ExperimentRepository(db).create({"name": "AMP2", "experiment_type": "amplification", "attack_type": "ddos", "attack_intensity": "HIGH"})
+        da_repo = DefenseAmplificationResultRepository(db)
+        da_repo.create({
+            "experiment_id": exp.id, "control_name": "firewall",
+            "attack_type": "ddos", "attack_intensity": "HIGH",
+            "attack_workload": 500, "workload_unit": "requests_per_second",
+            "energy_attack_only": 100, "energy_attack_defense": 150,
+            "additional_defense_energy": 50, "defense_energy_amplification": 0.1,
+        })
+
+        results = da_repo.get_by_experiment(exp.id)
+        assert len(results) == 1
+        assert da_repo.get_by_experiment(other.id) == []
+
+    def test_attribution_queries(self, db):
+        exp_repo = ExperimentRepository(db)
+        exp = exp_repo.create({"name": "ATTR", "experiment_type": "marginal_energy", "attack_type": "ddos", "attack_intensity": "LOW"})
+        other = exp_repo.create({"name": "ATTR2", "experiment_type": "marginal_energy", "attack_type": "brute_force", "attack_intensity": "HIGH"})
+        run_repo = ExperimentRunRepository(db)
+        base = run_repo.create({"experiment_id": exp.id, "trial_number": 1, "attack_type": "ddos", "attack_intensity": "LOW"})
+        sec = run_repo.create({"experiment_id": exp.id, "trial_number": 2, "attack_type": "ddos", "attack_intensity": "LOW"})
+        base2 = run_repo.create({"experiment_id": other.id, "trial_number": 1, "attack_type": "brute_force", "attack_intensity": "HIGH"})
+        sec2 = run_repo.create({"experiment_id": other.id, "trial_number": 2, "attack_type": "brute_force", "attack_intensity": "HIGH"})
+
+        attr_repo = EnergyAttributionRepository(db)
+        attr_repo.create({
+            "experiment_id": exp.id, "baseline_run_id": base.id, "security_run_id": sec.id,
+            "attack_type": "ddos", "attack_intensity": "LOW",
+            "baseline_energy_joules": 100, "security_energy_joules": 150,
+            "marginal_energy_joules": 50, "measurement_mode": "ESTIMATED",
+        })
+        attr_repo.create({
+            "experiment_id": other.id, "baseline_run_id": base2.id, "security_run_id": sec2.id,
+            "attack_type": "brute_force", "attack_intensity": "HIGH",
+            "baseline_energy_joules": 200, "security_energy_joules": 260,
+            "marginal_energy_joules": 60, "measurement_mode": "ESTIMATED",
+        })
+
+        by_exp = attr_repo.get_by_experiment(exp.id)
+        assert len(by_exp) == 1
+        assert by_exp[0].experiment_id == exp.id
+
+        by_attack = attr_repo.get_by_attack_type("brute_force")
+        assert len(by_attack) == 1
+        assert by_attack[0].attack_type == "brute_force"
+
+        by_intensity = attr_repo.filter_attributions(attack_intensity="HIGH")
+        assert len(by_intensity) == 1
+        assert by_intensity[0].attack_intensity == "HIGH"
+
+        by_mode = attr_repo.filter_attributions(measurement_mode="ESTIMATED")
+        assert len(by_mode) == 2
+
+        by_mode_simulated = attr_repo.filter_attributions(measurement_mode="SIMULATED")
+        assert by_mode_simulated == []

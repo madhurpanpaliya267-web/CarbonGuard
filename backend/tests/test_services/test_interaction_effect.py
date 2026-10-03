@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.models.base import Base
+from app.models.research import InteractionResult
 from app.services.research_service import ResearchExperimentService
 from app.services.interaction_effect_service import (
     InteractionEffectService,
@@ -699,3 +700,21 @@ class TestListing:
 
     def test_get_missing_returns_none(self, interaction_svc):
         assert interaction_svc.get_interaction_effect(999999) is None
+
+
+class TestEnvironmentAndEffectiveness:
+    def test_environment_key_without_experiment(self):
+        assert InteractionEffectService._environment_key(None) == "unknown"
+
+    def test_effectiveness_for_missing_runs(self, interaction_svc):
+        row = InteractionResult(
+            baseline_run_id=None,
+            control_a_run_id=999999,
+            control_b_run_id=None,
+            combined_run_id=None,
+        )
+        response = interaction_svc._effectiveness_for(row)
+        assert response.baseline is None
+        assert response.control_a is None
+        assert response.control_b is None
+        assert response.combined is None

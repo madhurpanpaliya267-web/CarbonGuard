@@ -132,6 +132,26 @@ class TestValidateExperimentConfig:
         with pytest.raises(ExperimentError, match="number_of_trials"):
             service.validate_experiment_config(config)
 
+    def test_invalid_duration_rejected(self, service):
+        config = {
+            "experiment_type": "MARGINAL_ENERGY",
+            "attack_type": "ddos",
+            "attack_intensity": "medium",
+            "duration_seconds": 5000,
+        }
+        with pytest.raises(ExperimentError, match="duration_seconds must be 1-3600"):
+            service.validate_experiment_config(config)
+
+    def test_non_numeric_duration_rejected(self, service):
+        config = {
+            "experiment_type": "MARGINAL_ENERGY",
+            "attack_type": "ddos",
+            "attack_intensity": "medium",
+            "duration_seconds": "long",
+        }
+        with pytest.raises(ExperimentError, match="duration_seconds must be 1-3600"):
+            service.validate_experiment_config(config)
+
 
 class TestCreateExperiment:
     def test_creates_experiment(self, service):
@@ -469,3 +489,49 @@ class TestBaselineVsControlled:
         c_meas = service.get_run_measurements(c_runs[0].id)
         assert len(b_meas) == 1
         assert len(c_meas) == 1
+
+
+class TestExecutionFailureHandling:
+    def test_trial_failure_marks_run_and_experiment_failed(
+        self, service, monkeypatch
+    ):
+        exp = service.create_experiment({
+            "name": "Failure Path",
+            "experiment_type": "MARGINAL_ENERGY",
+            "attack_type": "ddos",
+            "attack_intensity": "low",
+            "security_controls": [],
+            "duration_seconds": 30,
+            "number_of_trials": 1,
+        })
+
+        def boom(*args, **kwargs):
+            raise RuntimeError("simulated trial failure")
+
+        monkeypatch.setattr("app.services.research_service.simulate_attack", boom)
+
+        with pytest.raises(RuntimeError, match="simulated trial failure"):
+            service.execute_experiment(exp.experiment_uuid)
+
+        experiment = service.get_experiment(exp.experiment_uuid)
+        assert experiment.status == "failed"
+        assert "Execution failed: simulated trial failure" in experiment.notes
+
+        runs = service.get_experiment_runs(exp.experiment_uuid)
+        assert len(runs) == 1
+        assert runs[0].status == "failed"
+        assert "simulated trial failure" in runs[0].error_message
+
+    def test_invalid_status_transition_rejected(self, service):
+        exp = service.create_experiment({
+            "name": "Transition Path",
+            "experiment_type": "MARGINAL_ENERGY",
+            "attack_type": "ddos",
+            "attack_intensity": "low",
+            "duration_seconds": 30,
+        })
+        assert exp.status == "created"
+
+        with pytest.raises(ExperimentError, match="Invalid status transition"):
+            service._transition_status(exp, "completed")
+        assert exp.status == "created"
