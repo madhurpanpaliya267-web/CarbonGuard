@@ -202,3 +202,59 @@ with a `reason` and a pipeline warning.
 
 Missing metrics render as **Not available** with the API's reason; nothing is
 fabricated client-side.
+
+## Integration Audit (Phase 17)
+
+Phase 17 verified the complete integration across the whole system. No
+integration defects were found; no source code was changed.
+
+### Verified end-to-end path
+
+```
+frontend api.runPipeline / researchApi
+  → fetch(`${VITE_API_BASE_URL}` = http://localhost:8000/api/v1)
+  → app.main → api/router.py (15 route modules + research + orchestration)
+  → thin route → service → engine (security → controls → energy provider → carbon)
+  → research persistence (experiment_runs / energy_measurements /
+    security_effectiveness / research_metrics)
+  → typed response (response_model DTOs)
+  → frontend section rendering with provenance badges
+```
+
+Verified specifically:
+
+- **Router registration**: all 15 feature routers + `research` + `orchestration`
+  mounted under `/api/v1`; no duplicate or stale routes; route ordering
+  (`/threats/stats` before `/{threat_id}`) is correct.
+- **Endpoint → consumer map**: every path, HTTP method, query parameter and
+  request payload used by `shared/utils/api.ts` and `research-lab/api/researchApi.ts`
+  matches a backend route signature (filtered lists: `page`/`page_size`,
+  `severity`, `threat_type`, `event_type`, `type`/`priority`/`unread_only`,
+  `period`, research `experiment_id`/`measurement_mode`/`control_name`).
+- **DTO contracts**: `ExperimentCreateRequest`, `ExperimentSummaryResponse`,
+  `ExperimentStatusResponse`, `ResearchAnalyticsRequest`,
+  `ResearchSummaryResponse` and `OrchestrationRunResponse` (all 14 top-level
+  keys) match their frontend TypeScript counterparts field-for-field.
+- **Orchestration chain**: attack → threat → risk → rule-based defense →
+  energy provider → carbon → research recording → persistence feeds →
+  response → `AttackSimulatorPage` rendering (stages, warnings, provenance,
+  measurement badges).
+- **Persistence/DTO boundary**: research and orchestration routes return
+  typed `response_model` schemas (25 typed responses); ORM rows never leak
+  through those DTOs. Remaining feature routes return plain dicts by design
+  (see §2.9 problem 5 in RESEARCH_ARCHITECTURE.md).
+- **E2E smoke test**: `backend/tests/test_api/test_e2e_smoke.py` exercises the
+  whole chain (create experiment → pipeline run with `record_research` →
+  summary/security/research aggregates → CSV export) in under a second.
+
+### Known integration limitations (unchanged, pre-existing)
+
+| # | Limitation | Reference |
+|---|-----------|-----------|
+| 1 | Dashboard metric values and chart series still include synthetic randomness; only event/threat counters come from the DB | RESEARCH_ARCHITECTURE §2.9 #2/#3 |
+| 2 | Duplicate event endpoints (`/security/events` and `/events`), both consumed by the frontend | §2.9 #4 |
+| 3 | Two HTTP client patterns coexist: `fetchWithFallback` (GET + mock fallback) and `apiClient` (mutations) | §2.9 #8 |
+| 4 | No authentication and no database migrations | §2.9 #6/#7 |
+| 5 | Attack Simulator uses a local `MeasurementBadge`; Research Lab uses `modeVariant` — same literal labels, slightly different color mapping (both keep MEASURED visually distinct) | audit observation |
+| 6 | Backend has no linter; `npm run lint` references eslint, which is not in devDependencies (typechecking runs via `npm run build`) | docs/testing.md |
+| 7 | `api.simulateAttack` (`POST /simulator/simulate`) is retained API surface with no current frontend consumer | audit observation |

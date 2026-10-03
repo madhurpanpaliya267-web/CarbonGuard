@@ -68,7 +68,7 @@ CarbonGuard/
 │   │   ├── config.py            # Settings
 │   │   ├── database.py          # DB connection
 │   │   └── main.py              # FastAPI app
-│   ├── tests/                   # pytest suite (849 tests)
+│   ├── tests/                   # pytest suite (850 tests)
 │   ├── seed.py                  # Database seeder
 │   └── requirements.txt
 ├── docs/                        # Architecture, API, research documentation
@@ -92,7 +92,7 @@ CarbonGuard/
 | Frontend | React 18, TypeScript 5, Vite 5, Tailwind CSS, Recharts |
 | Backend | Python 3.11+, FastAPI, SQLAlchemy 2.0, Pydantic v2 |
 | Database | SQLite (development), easily migrable to PostgreSQL |
-| Testing | pytest (849 backend tests), Vitest + Testing Library (351 frontend tests) |
+| Testing | pytest (850 backend tests), Vitest + Testing Library (351 frontend tests) |
 
 ## Getting Started
 
@@ -150,7 +150,7 @@ Frontend available at: `http://localhost:5173`
 ### Running Tests
 
 ```bash
-# Backend tests (849 tests)
+# Backend tests (850 tests)
 cd backend
 python -m pytest tests/ -v
 

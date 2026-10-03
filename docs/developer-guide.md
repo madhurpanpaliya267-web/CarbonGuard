@@ -137,8 +137,8 @@ cd backend
 python -m pytest tests/ -v
 ```
 
-This runs **849 tests** across:
-- 169 API integration tests (15 route modules)
+This runs **850 tests** across:
+- 170 API integration tests (15 route modules, incl. Phase 17 E2E smoke)
 - 264 engine unit tests (6 engine modules)
 - 381 service unit tests (17 service classes)
 - 35 model/repository tests

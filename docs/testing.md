@@ -6,7 +6,7 @@ This document describes the testing approach for both backend and frontend.
 
 | Layer | Framework | Tests | Coverage |
 |-------|-----------|-------|----------|
-| Backend API | pytest | 169 | 19 test files (15 route modules) |
+| Backend API | pytest | 170 | 20 test files (15 route modules) |
 | Backend Engines | pytest | 264 | 13 test files (6 engine modules) |
 | Backend Services | pytest | 381 | 16 test files (17 service classes) |
 | Backend Models/Repos | pytest | 35 | Research repository layer |
@@ -14,7 +14,7 @@ This document describes the testing approach for both backend and frontend.
 | Frontend Components | Vitest | 89 | 13 shared UI components |
 | Frontend Utilities | Vitest | 33 | Formatters, export, research API helpers |
 | Frontend Routing/Layout | Vitest | 6 | App routes, main layout |
-| **Total** | | **1200** | 849 backend + 351 frontend |
+| **Total** | | **1201** | 850 backend + 351 frontend |
 
 ## Backend Testing
 
@@ -23,11 +23,12 @@ This document describes the testing approach for both backend and frontend.
 ```
 backend/tests/
 ├── conftest.py                    # Shared fixtures (client, db, setup_database)
-├── test_api/                      # 19 files, 169 tests
+├── test_api/                      # 20 files, 170 tests
 │   ├── test_analytics.py          # 4 tests
 │   ├── test_carbon.py             # 4 tests
 │   ├── test_dashboard.py          # 9 tests
 │   ├── test_defense_energy_amplification.py # 16 tests
+│   ├── test_e2e_smoke.py          # 1 test (Phase 17 end-to-end chain)
 │   ├── test_energy.py             # 3 tests
 │   ├── test_interaction_effect.py # 15 tests
 │   ├── test_marginal_energy.py    # 14 tests
