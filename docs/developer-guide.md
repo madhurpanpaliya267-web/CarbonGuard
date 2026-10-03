@@ -29,7 +29,7 @@ CarbonGuard/
 │   └── .env.example       # Environment template
 ├── frontend/              # React TypeScript frontend
 │   ├── src/               # Source code
-│   │   ├── features/      # Feature modules (13)
+│   │   ├── features/      # Feature modules (14, incl. research-lab)
 │   │   ├── shared/        # Shared components, utils, types
 │   │   ├── App.tsx        # Router
 │   │   └── main.tsx       # Entry point
@@ -137,10 +137,11 @@ cd backend
 python -m pytest tests/ -v
 ```
 
-This runs **187 tests** across:
-- 46 API integration tests (13 route modules)
-- 64 engine unit tests (8 engine modules)
-- 77 service unit tests (9 service classes)
+This runs **849 tests** across:
+- 169 API integration tests (15 route modules)
+- 264 engine unit tests (6 engine modules)
+- 381 service unit tests (17 service classes)
+- 35 model/repository tests
 
 ### Frontend Tests
 
@@ -149,12 +150,11 @@ cd frontend
 npm test
 ```
 
-This runs **187 tests** across:
-- 13 page tests (one per feature)
-- 14 shared UI component tests
-- 1 layout test
-- 1 utility test
-- 1 routing test
+This runs **351 tests** across:
+- 223 page and feature tests (22 files, incl. Research Lab)
+- 89 shared UI component tests (13 files)
+- 33 utility tests (formatters, export, research API/hooks)
+- 6 routing and layout tests
 
 ### Frontend Type Check
 

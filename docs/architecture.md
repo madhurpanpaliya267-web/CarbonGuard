@@ -57,7 +57,7 @@ main.py → api/ → services/ → repositories/ → models/
 
 ```mermaid
 graph LR
-    subgraph API["API Routes (13 modules)"]
+    subgraph API["API Routes (15 modules)"]
         A1[dashboard]
         A2[security]
         A3[attack_simulator]
@@ -71,9 +71,11 @@ graph LR
         A11[events]
         A12[system_health]
         A13[settings]
+        A14[research]
+        A15[orchestration]
     end
 
-    subgraph Services["Services (9 classes)"]
+    subgraph Services["Services (17 classes)"]
         S1[DashboardService]
         S2[SecurityService]
         S3[CarbonService]
@@ -83,9 +85,17 @@ graph LR
         S7[SystemService]
         S8[AnalyticsService]
         S9[renewable_service]
+        S10[ResearchExperimentService]
+        S11[orchestration_service]
+        S12[marginal_energy_service]
+        S13[interaction_effect_service]
+        S14[defense_energy_amplification_service]
+        S15[research_analytics_service]
+        S16[research_summary_service]
+        S17[research_export_service]
     end
 
-    subgraph Engines["Engines (4 modules)"]
+    subgraph Engines["Engines (6 modules)"]
         E1[threat_detector]
         E2[risk_analyzer]
         E3[attack_simulator]
@@ -94,6 +104,8 @@ graph LR
         E6[workload_optimizer]
         E7[recommendation_engine]
         E8[explainability]
+        E9[energy_providers]
+        E10[statistics]
     end
 
     A1 --> S1
@@ -108,6 +120,15 @@ graph LR
     A10 --> S8
     A12 --> S7
     A13 --> S7
+    A14 --> S10
+    A14 --> S12
+    A14 --> S13
+    A14 --> S14
+    A14 --> S15
+    A14 --> S16
+    A14 --> S17
+    A15 --> S11
+    S11 --> S10
 
     S2 --> E1
     S2 --> E2
@@ -116,6 +137,8 @@ graph LR
     S4 --> E5
     S5 --> E6
     S6 --> E7
+    S10 --> E9
+    S15 --> E10
 ```
 
 ### Key Engine Functions
@@ -130,6 +153,8 @@ graph LR
 | `workload_optimizer` | `optimize_workloads()`, `generate_sample_workloads()` | Carbon-aware scheduling |
 | `recommendation_engine` | `generate_recommendations()` | Rule-based multi-factor recommendations |
 | `explainability` | `explain_prediction()`, `explain_recommendation()` | Human-readable explanation generation |
+| `energy providers` | `get_provider()`, `get_measurement()` | ESTIMATED/MEASURED energy provider abstraction used by Phases 5-7 |
+| `statistics` | `descriptive_statistics()`, `confidence_interval_t()`, `paired_t_test()`, `wilcoxon_signed_rank()`, `cohens_dz()` | Deterministic research statistics (Phase 8) |
 
 ## Frontend Architecture
 
@@ -137,7 +162,7 @@ The frontend uses a feature-based organization with shared components:
 
 ```mermaid
 graph TB
-    subgraph Features["Feature Modules (13)"]
+    subgraph Features["Feature Modules (14)"]
         F1[dashboard]
         F2[security]
         F3[attack-simulator]
@@ -148,9 +173,10 @@ graph TB
         F8[renewable-energy]
         F9[ai-recommendations]
         F10[analytics]
-        F11[events]
-        F12[system-health]
-        F13[settings]
+        F11[research-lab]
+        F12[events]
+        F13[system-health]
+        F14[settings]
     end
 
     subgraph Shared["Shared Layer"]
@@ -169,6 +195,11 @@ graph TB
     APP --> Features
     Features --> Shared
 ```
+
+The `research-lab` module hosts the seven Research Lab routes (overview,
+marginal energy, interaction analysis, defense amplification, experiments,
+experiment detail, dataset) — Phases 9-12. See
+[RESEARCH_ARCHITECTURE.md](RESEARCH_ARCHITECTURE.md).
 
 ### Shared UI Components (14)
 

@@ -20,6 +20,8 @@ An academic demonstration project that combines cyber-threat detection with envi
 | **Renewable Energy** | Solar/wind availability tracking with 24-hour forecasting |
 | **AI Recommendations** | Rule-based security and sustainability recommendations |
 | **Analytics** | Security, carbon, energy, and optimization trend analysis |
+| **Research Lab** | Experiment-driven research into the energy and carbon cost of security: marginal energy attribution (Phase 5), control interaction effects (Phase 6), defense energy amplification (Phase 7), statistical analytics (Phase 8), carbon metrics (Phase 10) — every result labeled ESTIMATED/MEASURED/SIMULATED |
+| **End-to-End Pipeline** | One orchestrated flow from attack simulation through threat detection, rule-based defense, energy measurement and carbon calculation to optional research recording (Phase 13) |
 | **Events Log** | Searchable event log with pagination and filtering |
 | **System Health** | Service status monitoring with utilization history |
 | **Settings** | Configurable parameters for carbon calculations and optimization |
@@ -41,6 +43,7 @@ CarbonGuard/
 │   │   │   ├── renewable-energy/# Renewable tracking
 │   │   │   ├── ai-recommendations/ # Recommendations
 │   │   │   ├── analytics/       # Analytics dashboards
+│   │   │   ├── research-lab/    # Research Lab (Phases 9-12)
 │   │   │   ├── events/          # Event logs
 │   │   │   ├── system-health/   # System monitoring
 │   │   │   └── settings/        # Configuration
@@ -55,6 +58,9 @@ CarbonGuard/
 │   │   ├── engines/             # Domain computation
 │   │   │   ├── security/        # Threat detection, risk analysis
 │   │   │   ├── carbon/          # Carbon calculation
+│   │   │   ├── energy/          # Energy provider abstraction (ESTIMATED/MEASURED)
+│   │   │   ├── analytics/       # Deterministic research statistics
+│   │   │   ├── ai/              # Recommendations, explainability
 │   │   │   └── optimizer/       # Workload optimization
 │   │   ├── repositories/        # Database CRUD
 │   │   ├── models/              # SQLAlchemy ORM models
@@ -62,9 +68,10 @@ CarbonGuard/
 │   │   ├── config.py            # Settings
 │   │   ├── database.py          # DB connection
 │   │   └── main.py              # FastAPI app
-│   ├── tests/                   # pytest test suite
+│   ├── tests/                   # pytest suite (849 tests)
 │   ├── seed.py                  # Database seeder
 │   └── requirements.txt
+├── docs/                        # Architecture, API, research documentation
 ├── AGENTS.md                    # Development guidelines
 ├── README.md
 └── .gitignore
@@ -85,7 +92,7 @@ CarbonGuard/
 | Frontend | React 18, TypeScript 5, Vite 5, Tailwind CSS, Recharts |
 | Backend | Python 3.11+, FastAPI, SQLAlchemy 2.0, Pydantic v2 |
 | Database | SQLite (development), easily migrable to PostgreSQL |
-| Testing | pytest (backend), TypeScript strict mode (frontend) |
+| Testing | pytest (849 backend tests), Vitest + Testing Library (351 frontend tests) |
 
 ## Getting Started
 
@@ -143,11 +150,15 @@ Frontend available at: `http://localhost:5173`
 ### Running Tests
 
 ```bash
-# Backend tests
+# Backend tests (849 tests)
 cd backend
 python -m pytest tests/ -v
 
-# Frontend build check
+# Frontend tests (351 tests)
+cd frontend
+npm test
+
+# Frontend production build (type check + bundle)
 cd frontend
 npm run build
 ```
@@ -166,6 +177,13 @@ npm run build
 | `/renewable-energy` | Renewable Energy | Solar/wind availability tracking |
 | `/ai-recommendations` | AI Recommendations | Security and sustainability suggestions |
 | `/analytics` | Analytics | Trend analysis across all metrics |
+| `/research-lab` | Research Lab | Experiment-driven energy/carbon research overview |
+| `/research-lab/marginal-energy` | Marginal Energy | Phase 5 attack-conditioned energy attribution |
+| `/research-lab/interaction-analysis` | Interaction Analysis | Phase 6 security-control interaction effects |
+| `/research-lab/defense-amplification` | Defense Amplification | Phase 7 defense energy cost analysis |
+| `/research-lab/experiments` | Experiments | Experiment list and runner |
+| `/research-lab/experiments/:id` | Experiment Detail | Runs, measurements, and trial details |
+| `/research-lab/dataset` | Research Dataset | Searchable dataset of persisted research results |
 | `/events` | Event Logs | Searchable security event log |
 | `/system-health` | System Health | Platform component status |
 | `/settings` | Settings | Configuration management |
@@ -206,6 +224,8 @@ npm run build
 | `/api/v1/analytics/carbon` | GET | Carbon analytics |
 | `/api/v1/analytics/energy` | GET | Energy analytics |
 | `/api/v1/analytics/optimization` | GET | Optimization analytics |
+| `/api/v1/orchestration/run` | POST | End-to-end pipeline: simulate → detect → defense → energy → carbon → optional research recording (Phase 13) |
+| `/api/v1/research/*` | GET/POST | Research Lab: experiments, marginal energy, interaction effects, defense amplification, analytics, summary, metrics, export (see API Reference) |
 | `/api/v1/events` | GET | Event log |
 | `/api/v1/system-health` | GET | System health |
 | `/api/v1/system-health/history` | GET | System health history |
@@ -236,8 +256,14 @@ Gross CO2 - Renewable Offset = Net CO2 (gCO2)
 | [API Reference](docs/api-reference.md) | Complete API endpoint documentation with examples |
 | [Developer Guide](docs/developer-guide.md) | Setup instructions, environment config, development workflow |
 | [Deployment](docs/deployment.md) | Docker configuration and deployment instructions |
-| [Database Schema](docs/database.md) | Table definitions and entity relationships |
+| [Database Schema](docs/database.md) | Table definitions and entity relationships (incl. research tables) |
 | [Testing](docs/testing.md) | Test strategy, structure, and coverage details |
+| [Research Architecture](docs/RESEARCH_ARCHITECTURE.md) | Research system design and implementation phase roadmap |
+| [Research Methodology](docs/RESEARCH_METHODOLOGY.md) | Research formulas, provenance rules, and statistical methods |
+| [Experiment Protocol](docs/EXPERIMENT_PROTOCOL.md) | Experiment execution protocol, comparability, and validity rules |
+| [Energy Measurement](docs/ENERGY_MEASUREMENT.md) | Energy provider abstraction and measurement modes |
+| [Attack Profiles](docs/ATTACK_PROFILES.md) | Attack types, intensity levels, and workload definitions |
+| [Pipeline](docs/PIPELINE.md) | End-to-end CarbonGuard orchestration flow (Phase 13) |
 
 ## License
 

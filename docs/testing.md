@@ -6,9 +6,9 @@ This document describes the testing approach for both backend and frontend.
 
 | Layer | Framework | Tests | Coverage |
 |-------|-----------|-------|----------|
-| Backend API | pytest | 169 | All 19 route modules |
-| Backend Engines | pytest | 264 | 13 engine modules |
-| Backend Services | pytest | 381 | 16 service modules |
+| Backend API | pytest | 169 | 19 test files (15 route modules) |
+| Backend Engines | pytest | 264 | 13 test files (6 engine modules) |
+| Backend Services | pytest | 381 | 16 test files (17 service classes) |
 | Backend Models/Repos | pytest | 35 | Research repository layer |
 | Frontend Pages | Vitest | 223 | All 22 feature test files |
 | Frontend Components | Vitest | 89 | 13 shared UI components |
